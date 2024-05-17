@@ -1,7 +1,7 @@
-# AlgebraicTemplate.jl
+# StateCharts.jl
 
 ```@meta
-CurrentModule = AlgebraicTemplate
+CurrentModule = StateCharts
 ```
 
-`AlgebraicTemplate.jl` is a Julia library for...
+`StateCharts.jl` is a Julia library for...

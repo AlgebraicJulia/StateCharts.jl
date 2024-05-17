@@ -1,3 +1,3 @@
-using Aqua, AlgebraicTemplate 
+using Aqua, StateCharts 
 
-Aqua.test_all(AlgebraicTemplate, ambiguities=false,)
+Aqua.test_all(StateCharts, ambiguities=false,)
