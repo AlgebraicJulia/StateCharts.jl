@@ -2,7 +2,7 @@
 """
 module StateCharts
 
-export hello, StateChartF, Graph
+export StateChartF, Graph
 
 using Catlab
 
@@ -24,7 +24,7 @@ state_dict(n) = Dict(s=>i for (i, s) in enumerate(n))
     S::Ob #state
     T::Ob #transitions
     ALT::Ob #alternative branches
-    E::Ob # start transition (in the basic statechart, there is only 1 start transition)
+    E::Ob # start transition (in this statechart schema, it can have multiple start transitions -- with multiple state chart in parallel)
     EALT::Ob # alternative branches for the start transition
     
     ts::Hom(T,S)
