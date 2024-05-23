@@ -1,4 +1,7 @@
 [deps]
-StateCharts = "BFC335C0-D564-425B-98AA-D5C699C8B7AB"
+AlgebraicABMs = "5a5e3447-9604-46e6-8d91-cb86f5f51721"
+AlgebraicRewriting = "725a01d3-f174-5bbd-84e1-b9417bad95d9"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Fleck = "5bb9b785-358c-4fee-af0f-b94a146244a8"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+StateCharts = "bfc335c0-d564-425b-98aa-d5c699c8b7ab"

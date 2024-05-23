@@ -2,7 +2,10 @@
 """
 module StateCharts
 
-export StateChartF, Graph
+export StateChartF, TheoryStateChart, AbstractStateChart, StateChart,
+ns, nt, ne, neal, nal, sname, snames, tname, tnames, ename, enames, eaname, eanames, aname, anames, texpr,
+ttype, ealsource, ealsources, ealtarget, ealtargets, tsource, ttarget, etarget, alsource, alsources, altarget, altargets, 
+Graph
 
 using Catlab
 
@@ -174,6 +177,8 @@ alsources(ss::AbstractStateChart) = [alsource(ss, al) for al in 1:nal(ss)]
 # return an alternative's target state
 altarget(ss::AbstractStateChart,al) = subpart(ss,al,:abt) 
 altargets(ss::AbstractStateChart) = [altarget(ss, al) for al in 1:nal(ss)]
+
+texpr(ss::AbstractStateChart,t) = subpart(ss,t,:texpr) 
 
 # visualization
 TTYPE=Dict(:Rate=>"📉", :TimeOut=>"⏰", :Conditional=>"❓", :Pattern=>"🚩")
