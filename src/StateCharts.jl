@@ -55,6 +55,7 @@ end
 
 @abstract_acset_type AbstractStateChart
 @acset_type StateChartUntype(TheoryStateChart) <: AbstractStateChart
+#const StateChart = StateChartUntype{Symbol,Union{Float16,Sampleable},Symbol}
 const StateChart = StateChartUntype{Symbol,Float16,Symbol}
 
 # define functions of adding components of state charts

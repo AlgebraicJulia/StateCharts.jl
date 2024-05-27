@@ -1,5 +1,5 @@
 name = "StateCharts"
-uuid = "BFC335C0-D564-425B-98AA-D5C699C8B7AB"
+uuid = "bfc335c0-d564-425b-98aa-d5c699c8b7ab"
 license = "MIT"
 authors = ["AlgebraicJulia Developer <email@algebraicjulia.org>"]
 version = "0.0.1"
