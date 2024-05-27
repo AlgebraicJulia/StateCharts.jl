@@ -61,102 +61,64 @@ states = [:Susceptible,
 pertussisStatechart = StateChartF(states, # states
     (   
         # we deal here with transitions from Susceptible.
-
         # first, we deal with the single vaccination transition for a susceptible person
         :t_transition42_vaccinationFromSusceptible=>(:Susceptible=>:Vaccinated_1,:Rate=>p_vaccinationRate),
-
         # next, we deal successively with the infection transitions to incubation states 
         # for each of full-strength, mild and weak infections in turn
         map((x,y)->:t_S_I_newExposure_FullStrength_ * x =>(:Susceptible=>:Incubation_I,:Pattern=>y), Infectives, IContacts_idx[:StoI])...,
-
-        #:t_V1_I_Vaccinated_1_I_newExposure_FullStrength=>(:Vaccinated_1=>:Incubation_I,:Pattern=>1),
         map((x,y)->:t_V1_I_Vaccinated_1_I_newExposure_FullStrength_ * x =>(:Vaccinated_1=>:Incubation_I,:Pattern=>y), Infectives, IContacts_idx[:V1toI])...,
-
-        #:t_R1_mI_newExposure_mild=>(:Recovered_1=>:Incubation_Im,:Pattern=>1),
         map((x,y)->:t_R1_mI_newExposure_mild_ * x =>(:Recovered_1=>:Incubation_Im,:Pattern=>y), Infectives, IContacts_idx[:R1toIm])...,
-
-        #:t_V2_mI_Vaccinated_2_I_newExposure_mild=>(:Vaccinated_2=>:Incubation_Im,:Pattern=>1),
         map((x,y)->:t_V2_mI_Vaccinated_2_I_newExposure_mild_ * x =>(:Vaccinated_2=>:Incubation_Im,:Pattern=>y), Infectives, IContacts_idx[:V2toIm])...,
-        
-        #:t_R2_wI_newExposure_weak=>(:Recovered_2=>:Incubation_Iw,:Pattern=>1),
-        map((x,y)->:t_R2_wI_newExposure_weak_ * x =>(:Recovered_2=>:Incubation_Iw,:Pattern=>y), Infectives, IContacts_idx[:R2toIw])...,
-        
+        map((x,y)->:t_R2_wI_newExposure_weak_ * x =>(:Recovered_2=>:Incubation_Iw,:Pattern=>y), Infectives, IContacts_idx[:R2toIw])...,       
         # next, we deal successively with the post-incubation transitions to infectivity for each of 
         # full-strength, mild and weak infections in turn
-        :t_transition41_becomingInfective_FullStrength=>(:Incubation_I=>:Infective_I,:TimeOut=>p_incubationPeriodInDay_I),
-        
-        :becomingInfective_mild=>(:Incubation_Im=>:Infective_Im,:TimeOut=>p_incubationPeriodInDay_Im),
-        
+        :t_transition41_becomingInfective_FullStrength=>(:Incubation_I=>:Infective_I,:TimeOut=>p_incubationPeriodInDay_I),        
+        :becomingInfective_mild=>(:Incubation_Im=>:Infective_Im,:TimeOut=>p_incubationPeriodInDay_Im),       
         :becomingInfective_weak=>(:Incubation_Iw=>:Infective_Iw,:TimeOut=>p_incubationPeriodInDay_Im),
-
         # now we deal with infection transitions that are too weak to 
         # trigger incubation & infectivity.  These occur from Recovered_2 and
         # and Vaccinated_3; note that lower levels of both natural & vaccine-induced
         # immunity lead to infectivity, and pathogen exposure induces no change at higher 
         # levels of immunity.
         # First, boosting of immunity from natural recovery
-        #:t_R3_R4_exposureBoostingRecovery_3=>(:Recovered_3=>:Recovered_4,:Pattern=>1),
         map((x,y)->:t_R3_R4_exposureBoostingRecovery_3_ * x =>(:Recovered_3=>:Recovered_4,:Pattern=>y), Infectives, IContacts_idx[:R3toR4])...,
-
         # NB: The model posits that exposure to pathogen in Vaccinated_3 indeed 
         # confers immunity comparable to from natural infection (i.e., to Recovery_4)
-        #:t_V3_R4_exposureBoostingWanedVaccinated_3=>(:Vaccinated_3=>:Recovered_4,:Pattern=>1),
         map((x,y)->:t_V3_R4_exposureBoostingWanedVaccinated_3_ * x =>(:Vaccinated_3=>:Recovered_4,:Pattern=>y), Infectives, IContacts_idx[:V3toR4])...,
-
         # having dealt with infection transitions, 
         # we next deal with recovery (departure from states of infectivity) for
         # each virulence level; all are governed by hazard rate gam and go to Recovered_4 
-        :t_gam_I_recoveryFromFullStrengthInfection=>(:Infective_I=>:Recovered_4,:Rate=>p_gam),
-       
+        :t_gam_I_recoveryFromFullStrengthInfection=>(:Infective_I=>:Recovered_4,:Rate=>p_gam),       
         :t_gam_ml_recoveryFromMildInfection=>(:Infective_Im=>:Recovered_4,:Rate=>p_gam),
-
         :t_gam_wI_recoveryFromWeakInfection=>(:Infective_Iw=>:Recovered_4,:Rate=>p_gam),
-
-
         # transitions involving waning of immunity from recovery states  
         :t_alp_R4_waningImmunityFromRecovered_4=>(:Recovered_4=>:Recovered_3,:Rate=>p_alp),
-
-        :t_alp_R3_waningImmunityFromRecovered_3=>(:Recovered_3=>:Recovered_2,:Rate=>p_alp),
-        
+        :t_alp_R3_waningImmunityFromRecovered_3=>(:Recovered_3=>:Recovered_2,:Rate=>p_alp),        
         :t_alp_R2_waningImmunityFromRecovered_2=>(:Recovered_2=>:Recovered_1,:Rate=>p_alp),
-
         :t_alp_R1_waningImmunityFromRecovered_1=>(:Recovered_1=>:Susceptible,:Rate=>p_eps),
-
-
         # now we deal with the transitions involving receipt of vaccines whilst in a recovered state
         # NB: There is no opportunity to boost immunity through vaccination (or natural exposure) 
         # in the highest state of natural induced immunity (Recovered_4)
         :t_transition6_vaccinationFromRecovered_1=>(:Recovered_1=>:Recovered_2,:Rate=>p_vaccinationRate),
-
         :t_transition8_vaccinationFromRecovered_2=>(:Recovered_2=>:Recovered_3,:Rate=>p_vaccinationRate),
-
         :t_R3_R4_vaccinationFromRecovered_3=>(:Recovered_3=>:Recovered_4,:Rate=>p_vaccinationRate),
-        
-
         # transitions involving waning of immunity from vaccinated states  
         :t_tau_V4_waningImmunityFromVaccinated_4=>(:Vaccinated_4=>:Vaccinated_3,:Rate=>p_tau),
-
         :t_tau_V3_waningImmunityFromVaccinated_3=>(:Vaccinated_3=>:Vaccinated_2,:Rate=>p_tau),
-
         :t_tau_V2_waningImmunityFromVaccinated_2=>(:Vaccinated_2=>:Vaccinated_1,:Rate=>p_tau),
-
-        :t_eps_S_waningImmunityFromVaccinated_1=>(:Vaccinated_1=>:Susceptible,:Rate=>p_eps),
-        
-        
+        :t_eps_S_waningImmunityFromVaccinated_1=>(:Vaccinated_1=>:Susceptible,:Rate=>p_eps),        
         # finally, we have transitions involving receipt of vaccines whilst in a vaccinated state
         # NB: There is no opportunity to boost immunity through vaccination (or natural exposure) 
         # in the highest state of vaccine-induced immunity (Vaccinated_4)
         :t_transition10_vaccinationFromVaccinated_1=>(:Vaccinated_1=>:Vaccinated_2,:Rate=>p_vaccinationRate),
-
         :t_transition11_vaccinationFromVaccinated_2=>(:Vaccinated_2=>:Vaccinated_3,:TimeOut=>p_vaccinationRate),
-
         :t_transition12_vaccinationFromVaccinated_3=>(:Vaccinated_3=>:Vaccinated_4,:TimeOut=>p_vaccinationRate),    
     ), #non-start transitions
 (), # alternatives for non-start transitions
 (:PertussisStateChart=>:Susceptible), # start transitions
 (:PertussisStateChart=>((:initialInfective,1.0/totalPopulation)=>:Infective_I)) # alternatives for start transitions
 )
-
+# plot out the state chart
 StateCharts.Graph(pertussisStatechart)
 
 # define the rewrite rules for contacts of Infectives
