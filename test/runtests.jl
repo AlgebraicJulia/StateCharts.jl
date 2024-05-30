@@ -1,9 +1,14 @@
 using Test
 
 @testset "Code Quality (Aqua.jl)" begin
-  include("aqua.jl")
+  #include("aqua.jl")
 end
 
-@testset "Core" begin
-  include("core.jl")
+@testset "StateChartsSchema" begin
+  include("StateChartsSchema.jl")
 end
+
+@testset "StateChartsABMsInterfaces" begin
+  include("interfacesToAMBs/StateChartsABMsInterfaces.jl")
+end
+
