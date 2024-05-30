@@ -1,9 +1,6 @@
-# # Code Example
-#
-# This is an example of adding a code example compiled with Literate.jl in the docs.
-#
-# First we want to load our package with `using`
+module TestStateChartsSchema
 
+using Test
 using StateCharts
 
 # Build a state chart of smoking, including three states: 
@@ -18,6 +15,9 @@ smoking = StateChartF((:NS,:CS,:PS), # states
 (:SmokingStateChart=>((:initializeToCS,0.2)=>:CS,(:initializeToPS,0.1)=>:PS)) # alternatives for start transitions
 )
 
+@test snames(smoking) == [:NS,:CS,:PS]
+@test tnames(smoking) == [:initiate, :quit, :relapse]
+
 Graph(smoking)
 
 # Build a state chart of breastfeeding, including two states:
@@ -31,5 +31,9 @@ breastfeeding = StateChartF((:NonBreastfeeding,:Breastfeeding), # states
 () # alternatives for start transitions
 )
 
+@test snames(breastfeeding) == [:NonBreastfeeding,:Breastfeeding]
+@test tnames(breastfeeding) == [:babyBorn, :returnToWork, :lactationProblem]
+
 Graph(breastfeeding)
 
+end

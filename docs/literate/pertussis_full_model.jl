@@ -1,17 +1,18 @@
-include("Interface_functions.jl")
-
 using Makie, CairoMakie
+using StateCharts
+using AlgebraicABMs
+using Catlab
 import Base: *
+
 ENV["JULIA_DEBUG"] = "AlgebraicABMs"; 
 
 *(x::Symbol, y::Symbol) = Symbol(String(x)*String(y))
 
 # define the parameter values
-totalPopulation=100.0
+totalPopulation=200.0
 c = 0.1411 * 10 # calculated by the average value among the 32 age groups in Hethocote model
 
 # the transmission probability seems very high to me. So I temporarily times 0.2 of it. 
-# TODO: need to talk to Dr.Osgood of the values of it
 β = [0.8,0.4,0.2] * 0.2 # 0.8 for full Infectives I
                   # 0.4 for mild Infectives Im
                   # 0.2 for weak Infectives Iw
@@ -139,7 +140,7 @@ add_parts!(init,:Susceptible,Int(totalPopulation-1),SusceptibleP=1)
 add_part!(init,:Infective_I,Infective_IP=1)
 
 # run the ABM model
-res = run!(make_ABM(pertussisStatechart,transitions_rules,is_schema_singObject=false), init; maxtime=20);
+res = run!(make_ABM(pertussisStatechart,transitions_rules,is_schema_singObject=false), init; maxtime=500);
 
 # plot out the results of each state
 Makie.plot(res; Dict(o=>X->nparts(X,o) for o in states)...)

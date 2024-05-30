@@ -1,9 +1,15 @@
-using StateCharts
+module StateChartsABMsInterfaces
+
+export StateChartABMSchema_SingleObject, StateChartABMSchema_MultipleObjects, StateChartCset_SingleObject, StateChartCset_MultipleObjects,
+make_rule_SingleObject, make_infectious_rule_SingleObject, make_rule_MultipleObjects, make_infectious_rule_MultipleObjects, get_rule,
+get_timer, make_ABM
+
 using AlgebraicABMs, AlgebraicRewriting, Catlab
 using Fleck
 using Random
-import AlgebraicRewriting.Incremental.IncrementalSum: IncSumHomSet
+using ..StateChartsSchema
 
+#import AlgebraicRewriting.Incremental.IncrementalSum: IncSumHomSet
 
 ############################################## the interface functions ####################################################
 ## Functions in this section are all included in the file "StateChartsInterface.jl", but this file is not #################
@@ -175,7 +181,8 @@ function make_ABM(ss::AbstractStateChart, transitions_rules;is_schema_singObject
         ABMRule(tn, get_rule(ss, t,transitions_rules,is_schema_singObject=is_schema_singObject), get_timer(ss,transitions_rules,t))
     end, [])
 end
+   
+end
 
 #############################################################################################
 ######################### end of the dependency function part ###############################
-
