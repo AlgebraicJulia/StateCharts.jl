@@ -1,5 +1,7 @@
 module NetworkSchemaInterfaces
 
+export SchemaTheory, Open, obname, obnames, nob, nhom, homame, homnames
+
 using Catlab
 
 vectorify(n::Vector) = collect(n)
@@ -34,6 +36,27 @@ end
 @acset_type SchemaUntyped(TheorySchema, index=[:homsrc,:homtgt,:attrsrc,:attrtgt]) <: AbstractSchema
 const SchemaTheory = SchemaUntyped{Symbol} 
 
+nob(s::AbstractSchema) = nparts(s, :Ob)
+nhom(s::AbstractSchema) = nparts(s, :Hom)
+nat(s::AbstractSchema) = nparts(s, :AttrType)
+
+obname(s::AbstractSchema, ob) = has_subpart(s, :obname) ? subpart(s, ob, :obname) : (1:nob(s))[ob]
+obnames(s::AbstractSchema) = map(ob -> obname(s, ob), 1:nob(s))
+
+homname(s::AbstractSchema, hom) = has_subpart(s, :homname) ? subpart(s, hom, :homname) : (1:nhom(s))[hom]
+homnames(s::AbstractSchema) = map(hom -> homname(s, hom), 1:nhom(s))
+
+# define the open schema as structured cospan
+const OpenSchemaObUntyped, OpenSchemaUntyped = OpenACSetTypes(SchemaUntyped, :Ob)
+const OpenSchemaOb, OpenSchema = OpenSchemaObUntyped{Symbol}, OpenSchemaUntyped{Symbol}
+
+Open(s::SchemaTheory) = OpenSchema(s, map(x -> FinFunction([x], nob(s)), 1:nob(s))...)
+Open(s::SchemaTheory, legs...) = begin
+  s_idx = Dict(obname(s, ob) => ob for ob in 1:nob(s))
+  OpenSchema(s, map(l -> FinFunction(map(i -> s_idx[i], l), nob(s)), legs)...)
+end
+Open(n, s::SchemaTheory, m) = Open(s,n,m)
+
 function SchemaTheory(ob,hom,attrtype,attr)
     st = SchemaTheory()
 
@@ -63,23 +86,4 @@ function SchemaTheory(ob,hom,attrtype,attr)
     return st
 end
 
-
-
-####### example of 
-ob=(:S,:I,:R,:V)
-hom=(:SV=>(:S,:V),
-     :IV=>(:I,:V),
-     :RV=>(:R,:V))
-
-ob2=(:V)
-hom2=[]
-attrtype=[:SIR]
-attr=[:VSIR=>(:V,:SIR)]
-
-a=SchemaTheory(ob, hom, [], [])
-
-b=SchemaTheory(ob2, hom2, attrtype,attr)
-
-
-  
 end
