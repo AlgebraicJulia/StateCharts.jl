@@ -9,6 +9,9 @@ end
 end
 
 @testset "StateChartsABMsInterfaces" begin
-  include("interfacesToAMBs/StateChartsABMsInterfaces.jl")
+  include("interfacesToABMs/StateChartsABMsInterfaces.jl")
 end
 
+@testset "NetworkSchemaInterfaces" begin
+  include("interfacesToABMs/NetworkSchemaInterfaces.jl")
+end

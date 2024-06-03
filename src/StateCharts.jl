@@ -3,8 +3,8 @@ using Reexport
 
 include("StateChartsSchema.jl")
 include("Visualization.jl")
-include("interfacesToAMBs/NetworkSchemaInterfaces.jl")
-include("interfacesToAMBs/StateChartsABMsInterfaces.jl")
+include("interfacesToABMs/NetworkSchemaInterfaces.jl")
+include("interfacesToABMs/StateChartsABMsInterfaces.jl")
 
 @reexport using .StateChartsSchema
 @reexport using .Visualization
