@@ -1,6 +1,6 @@
 module NetworkSchemaInterfaces
 
-export SchemaTheory, Open, obname, obnames, nob, nhom, homame, homnames
+export SchemaTheory, Open, obname, obnames, nob, nhom, homame, homnames, attrtypename, attrtypenames, attrname, attrnames
 
 using Catlab
 
@@ -39,12 +39,19 @@ const SchemaTheory = SchemaUntyped{Symbol}
 nob(s::AbstractSchema) = nparts(s, :Ob)
 nhom(s::AbstractSchema) = nparts(s, :Hom)
 nat(s::AbstractSchema) = nparts(s, :AttrType)
+na(s::AbstractSchema) = nparts(s, :Attr)
 
 obname(s::AbstractSchema, ob) = has_subpart(s, :obname) ? subpart(s, ob, :obname) : (1:nob(s))[ob]
 obnames(s::AbstractSchema) = map(ob -> obname(s, ob), 1:nob(s))
 
 homname(s::AbstractSchema, hom) = has_subpart(s, :homname) ? subpart(s, hom, :homname) : (1:nhom(s))[hom]
 homnames(s::AbstractSchema) = map(hom -> homname(s, hom), 1:nhom(s))
+
+attrtypename(s::AbstractSchema, at) = has_subpart(s, :attrtypename) ? subpart(s, at, :attrtypename) : (1:nat(s))[at]
+attrtypenames(s::AbstractSchema) = map(at -> attrtypename(s, at), 1:nat(s))
+
+attrname(s::AbstractSchema, a) = has_subpart(s, :attrname) ? subpart(s, a, :attrname) : (1:na(s))[a]
+attrnames(s::AbstractSchema) = map(a -> attrname(s, a), 1:na(s))
 
 # define the open schema as structured cospan
 const OpenSchemaObUntyped, OpenSchemaUntyped = OpenACSetTypes(SchemaUntyped, :Ob)

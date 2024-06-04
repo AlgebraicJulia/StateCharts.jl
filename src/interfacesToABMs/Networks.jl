@@ -1,6 +1,8 @@
 # this moduel defines the basic networks
 module Networks
 
+export SchDirectedNetwork, SchUndirectedNetwork, SchUndirectedReflectiveNetwork, SchPVArrow, SchPVSpan
+
 using Catlab
 
 # using basic graph schemas as the schema of basic networks
@@ -38,5 +40,18 @@ SchUndirectedReflectiveNetwork = SchSymmetricReflexiveGraph
 #  compose(refl, inv) == refl # Reflexive loop fixed by involution.
 #end
 
+# some interface schemas 
+# schema assign each person a vertice: P -> V
+@present SchPVArrow(FreeSchema) begin
+    (P,V)::Ob
+    PV::Hom(P,V)    
+end
+
+# schema represents the relationships between P and V: P monic<- Conn -> V
+@present SchPVSpan(FreeSchema) begin
+    (P,V,Conn)::Ob
+    connP::Hom(Conn,P)
+    connV::Hom(Conn,V)       
+end
 
 end
