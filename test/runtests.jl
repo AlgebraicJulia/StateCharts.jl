@@ -15,3 +15,7 @@ end
 @testset "NetworkSchemaInterfaces" begin
   include("interfacesToABMs/NetworkSchemaInterfaces.jl")
 end
+
+@testset "MigrateRules" begin
+  include("interfacesToABMs/MigrateRules.jl")
+end
