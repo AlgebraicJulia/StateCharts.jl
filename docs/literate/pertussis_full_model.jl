@@ -23,9 +23,9 @@ p_incubationPeriodInDay_I = 10
 p_incubationPeriodInDay_Im = 14
 p_incubationPeriodInDay_Iw = 21
 p_gam = 1 / 21.0
-p_alp = 1 / (5 * 365.0) # wanning rate of R
-p_tau = 1 / (2 * 365.0) # wanning rate of V
-p_eps = 1 / (100 * 365.0) # wanning rate from R1 or V1 to S
+p_alp = 1 / (5 * 365.0) # waning rate of R
+p_tau = 1 / (2 * 365.0) # waning rate of V
+p_eps = 1 / (100 * 365.0) # waning rate from R1 or V1 to S
 
 Incubations = [:Incubation_I, :Incubation_Im, :Incubation_Iw]
 Infectives = [:Infective_I, :Infective_Im, :Infective_Iw]
@@ -123,6 +123,7 @@ pertussisStatechart = StateChartF(states, # states
 StateCharts.Graph(pertussisStatechart)
 
 # define the rewrite rules for contacts of Infectives
+# Note that each transitions_rule has a pair timer=>rule
 f_infective_collect(S::Symbol,I::Symbol) = map(x->[[S,x],[I,x],[x]],Infectives)
 transitions_rules = [map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...),β,f_infective_collect(:Susceptible,:Incubation_I))...,
                      map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...),β,f_infective_collect(:Vaccinated_1,:Incubation_I))...,
