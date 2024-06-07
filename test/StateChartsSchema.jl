@@ -32,4 +32,16 @@ breastfeeding = UnitStateChartF((:NonBreastfeeding,:Breastfeeding), # states
 
 Graph(breastfeeding)
 
+########### create two state charts ##################
+smoke_healthy = StateChartsF((:SmokeStateChart=>(:NS,:CS,:PS),(:HealthyStateChart=>(:UH,:H))), # partition and states
+(:initiate=>(:NS=>:CS,:Rate=>0.01),:quit=>(:CS=>:PS,:Rate=>0.1),:relapse=>(:PS=>:CS,:Rate=>0.05),:sick=>(:H=>:UH,:Rate=>0.001),:recover=>(:UH=>:H,:TimeOut=>7)), #non-start transitions
+() # alternatives for non-start transitions
+)
+
+@test snames(smoke_healthy) == [:NS,:CS,:PS,:UH,:H]
+@test tnames(smoke_healthy) == [:initiate,:quit,:relapse,:sick,:recover]
+
+
+Graph(smoke_healthy)
+
 end
