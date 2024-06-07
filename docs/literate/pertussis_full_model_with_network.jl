@@ -132,6 +132,87 @@ transitions_rules = [map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_
                      map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...),β,f_infective_collect(:Vaccinated_3,:Recovered_4))...
 ];
 
+################# generate the model schema by composing auto state chart schema and the network schema ######################
+
+# define the persons object named :V, because we plan to compose the schema_statechart with graph schema by identifying ":V"
+schema_statechart = StateChartABMSchema_MultipleObjects(pertussisStatechart,:V) |> schemaACSet |> schemaPresent
+# compose the state chart schema with the network schema (symmetric reflective graph) as the ABM model schema
+schema_model_without_equations = compose(Open([:Susceptible],schemaACSet(schema_statechart),[:V]), Open([:V],schemaACSet(SchUndirectedReflectiveNetwork),[:E])) |> apex |> schemaPresent 
+##### need to add the composition equations of the model schema, since those equations disapper after composition. This would be fixed
+##### in the future using GATlab
+@present schema_model <: schema_model_without_equations begin
+    compose(inv,inv) == id(E)
+    compose(inv,src) == tgt
+    compose(inv,tgt) == src
+    compose(refl, src) == id(V)
+    compose(refl, tgt) == id(V)
+    compose(refl, inv) == refl 
+end
+# show the model schema
+to_graphviz(schema_model; prog="dot")
+
+################# define the data migration rule to automatically migrate rewrite rules from pure state chart schema to the compose model shema ######################
+@acset_type PertussisStateChart(schema_statechart, index=[:src,:tgt])
+@acset_type PertussisModelStaticNet(schema_model, index=[:src,:tgt])
+
+const migration_rule = @migration schema_model schema_statechart begin
+    V => V
+    Susceptible => Susceptible; SusceptibleV => SusceptibleV
+    Incubation_I => Incubation_I; Incubation_IV => Incubation_IV
+    Incubation_Im => Incubation_Im; Incubation_ImV => Incubation_ImV
+    Incubation_Iw => Incubation_Iw; Incubation_IwV => Incubation_IwV
+    Infective_I => Infective_I; Infective_IV => Infective_IV
+    Infective_Im => Infective_Im; Infective_ImV => Infective_ImV
+    Infective_Iw => Infective_Iw; Infective_IwV => Infective_IwV
+    Recovered_1 => Recovered_1; Recovered_1V => Recovered_1V
+    Recovered_2 => Recovered_2; Recovered_2V => Recovered_2V
+    Recovered_3 => Recovered_3; Recovered_3V => Recovered_3V
+    Recovered_4 => Recovered_4; Recovered_4V => Recovered_4V
+    Vaccinated_1 => Vaccinated_1; Vaccinated_1V => Vaccinated_1V
+    Vaccinated_2 => Vaccinated_2; Vaccinated_2V => Vaccinated_2V
+    Vaccinated_3 => Vaccinated_3; Vaccinated_3V => Vaccinated_3V
+    Vaccinated_4 => Vaccinated_4; Vaccinated_4V => Vaccinated_4V
+
+    E => @product begin
+        p1::V
+        p2::V
+    end
+    src => p1
+    tgt => p2
+    inv => begin
+        p1 => p2
+        p2 => p1
+    end
+end
+
+const y_schema_statechart = yoneda_cache(PertussisStateChart; clear=false)
+
+inf_l = @acset_colim y_schema_statechart begin
+    s::Susceptible
+    i::Infective_I
+end
+
+inf_m = @acset_colim y_schema_statechart begin
+    p::V
+    i::Infective_I
+end
+
+inf_r = @acset_colim y_schema_statechart begin
+    e::Incubation_I
+    i::Infective_I
+end
+
+inf_l_net = migrate(PertussisModelStaticNet, inf_l, migration_rule)
+
+inf_l2 = @acset_colim y_schema_statechart begin
+    e::Incubation_I
+end
+
+inf_l2_net = migrate(PertussisModelStaticNet, inf_l2, migration_rule)
+
+
+
+
 # define the initial state
 init = StateChartCset_MultipleObjects(pertussisStatechart)
 add_parts!(init,:P,Int(totalPopulation))

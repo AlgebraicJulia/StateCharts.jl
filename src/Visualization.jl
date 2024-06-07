@@ -36,21 +36,19 @@ def_transition(ss, s, t, f, ttype) = ([s, t],Attributes(:taillabel=>ttype,
                                                         :labeldistance=>"1.7",
                                                         :labelangle=>"0"))
 
-def_start_transition(ss, s, t) =  ([s, t],Attributes(:label=>""))
+# def_start_transition(ss, s, t) =  ([s, t],Attributes(:label=>""))
 
 def_default_branch(ss, s, t) =  ([s, t],Attributes(:label=>"",
                                                    :style=>"dashed"))
 
 def_alternative(ss, s, t, e, isStartTransition=true) =  ([s, t], isStartTransition ? Attributes(:label=>"$(eaname(ss,e))") : Attributes(:label=>"$(aname(ss,e))"))
 
-function Graph(ss::StateChart)
+function Graph(ss::AbstractUnitStateChart)
 
     stateNodes = [Node(def_state(ss,s)...) for s in 1:ns(ss)]
-    startPoints = [Node(def_start(ss,es)...) for es in 1:ne(ss)]
-    eBranchNodes = [Node(def_branchNode(ss,eb,true)...) for eb in unique(ealsources(ss))]
     branchNodes = [Node(def_branchNode(ss,b,false)...) for b in unique(alsources(ss))]
 
-    smts_Noes=vcat(stateNodes,startPoints,eBranchNodes,branchNodes)
+    smts_Noes=vcat(stateNodes,branchNodes)
 
     edges_T=map(1:nt(ss)) do k
         state_idx_outfrom = tsource(ss,k)
@@ -65,31 +63,13 @@ function Graph(ss::StateChart)
         end
         end |> flatten |> collect
 
-    edges_E = map(1:ne(ss)) do k
-        start_p = k
-        state_idx_into = etarget(ss,k)
-        if k in ealsources(ss)
-            branch_idx_into = k
-            [Edge(def_start_transition(ss,"se$start_p","eb$branch_idx_into")...),
-             Edge(def_default_branch(ss,"eb$branch_idx_into","s$state_idx_into")...)]
-        else        
-            [Edge(def_start_transition(ss,"se$start_p","s$state_idx_into")...)]
-        end
-        end |> flatten |> collect
-
-    edges_ealternatives = map(1:neal(ss)) do k
-        start_branch = ealsource(ss,k)
-        state_idx_into = ealtarget(ss,k)
-        [Edge(def_alternative(ss,"eb$start_branch","s$state_idx_into", k, true)...)]
-        end |> flatten |> collect
-
     edges_alternatives = map(1:nal(ss)) do k
         start_branch = alsource(ss,k)
         state_idx_into = altarget(ss,k)
         [Edge(def_alternative(ss,"b$start_branch","s$state_idx_into", k, false)...)]
         end |> flatten |> collect
 
-    smts_edges=vcat(edges_T,edges_E,edges_ealternatives,edges_alternatives)
+    smts_edges=vcat(edges_T,edges_alternatives)
 
     smts=vcat(smts_Noes,smts_edges)
 
