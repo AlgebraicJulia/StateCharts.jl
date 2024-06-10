@@ -9,6 +9,8 @@ AlgebraicABMs = "5a5e3447-9604-46e6-8d91-cb86f5f51721"
 AlgebraicRewriting = "725a01d3-f174-5bbd-84e1-b9417bad95d9"
 Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
 GATlab = "f0ffcf3b-d13a-433e-917c-cc44ccf5ead2"
+GraphPlot = "a2cc645c-3eea-5389-862e-a155d0052231"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 

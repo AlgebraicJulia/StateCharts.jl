@@ -1,6 +1,10 @@
 using Makie, CairoMakie
 using StateCharts
+using GraphPlot
+using Colors
+using DataMigrations
 using AlgebraicABMs
+using AlgebraicRewriting
 using Catlab
 import Base: *
 
@@ -9,7 +13,7 @@ ENV["JULIA_DEBUG"] = "AlgebraicABMs";
 *(x::Symbol, y::Symbol) = Symbol(String(x)*String(y))
 
 # define the parameter values
-totalPopulation=200.0
+totalPopulation=10.0
 c = 0.1411 * 10 # calculated by the average value among the 32 age groups in Hethocote model
 
 # the transmission probability seems very high to me. So I temporarily times 0.2 of it. 
@@ -147,6 +151,7 @@ schema_model_without_equations = compose(Open([:Susceptible],schemaACSet(schema_
     compose(refl, src) == id(V)
     compose(refl, tgt) == id(V)
     compose(refl, inv) == refl 
+
 end
 # show the model schema
 to_graphviz(schema_model; prog="dot")
@@ -213,14 +218,54 @@ inf_l2_net = migrate(PertussisModelStaticNet, inf_l2, migration_rule)
 
 
 
+
+const y_schema_statechart_Net = yoneda_cache(PertussisModelStaticNet; clear=false)
+
+re = @acset_colim y_schema_statechart_Net begin
+    e::E
+end
+
+
+
+
+
+
+
+
+
+# define small world network
+average_connections = 4
+p_random_connect = 0.2
+nw = smallworldNetWork(Int(totalPopulation), average_connections, p_random_connect);
+network = last(nw)
+
 # define the initial state
-init = StateChartCset_MultipleObjects(pertussisStatechart)
-add_parts!(init,:P,Int(totalPopulation))
-add_parts!(init,:Susceptible,Int(totalPopulation-1),SusceptibleP=1)
-add_part!(init,:Infective_I,Infective_IP=1)
+init = PertussisModelStaticNet()
+copy_parts!(init, network)
+#add_parts!(init,:V,Int(totalPopulation))
+add_parts!(init,:Susceptible,Int(totalPopulation-1),SusceptibleV=1:totalPopulation-1)
+add_part!(init,:Infective_I,Infective_IV=totalPopulation)
+init
+
+## plot the initial state of the model
+## define the state types of the ABM model
+## Susceptible => 1, Infective_I => 2
+groups = vcat(repeat([2],Int(totalPopulation-1)),[1]);
+colors = [colorant"red", colorant"lightseagreen"];
+StateCharts.Graph(first(nw),groups,colors)
+
 
 # run the ABM model
-res = run!(make_ABM(pertussisStatechart,transitions_rules,is_schema_singObject=false), init; maxtime=500);
+ABMrules = make_ABM(pertussisStatechart,transitions_rules,:V;is_schema_singObject=false,use_DataMigration=true, acset=PertussisModelStaticNet, migration_rule=migration_rule)
+res = run!(ABMrules, init; maxtime=5);
 
 # plot out the results of each state
 Makie.plot(res; Dict(o=>X->nparts(X,o) for o in states)...)
+
+
+
+rule = get_rule(pertussisStatechart, 1,transitions_rules,:V,is_schema_singObject=false, use_DataMigration=true, acset = PertussisModelStaticNet, migration_rule=migration_rule)
+tn = tname(pertussisStatechart,1)
+timer = get_timer(pertussisStatechart,transitions_rules,1)
+
+ABMRule(tn, rule, timer)

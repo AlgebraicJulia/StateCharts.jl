@@ -94,23 +94,49 @@ end
 
 # this function defines rewrite rules generate by single transition
 # here i should be []. and it generate only one single person without state
-function make_rule_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
+function singleTransitionLIR_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
     l = vectorify(l)
     i = vectorify(i)
     r = vectorify(r)
     L,R = [representable_SingleObject(ss,x,obn) for x in [l,r]]
     I = representable_SingleObject(ss,i,obn)
-    Rule(homomorphism(I,L),homomorphism(I,R)) 
+    return [L,I,R]
 end
 
-function make_infectious_rule_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
+
+function mk_rule(LIR; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+    L,I,R = LIR
+    if !use_DataMigration
+        return Rule(homomorphism(I,L;monic=true),homomorphism(I,R;monic=true)) 
+    else
+        Lm,Im,Rm = [migrate(acset, lir, migration_rule) for lir in LIR]
+        println(Lm)
+        println(Im)
+        println(Rm)
+        return Rule(homomorphism(Im,Lm;monic=true),homomorphism(Im,Rm;monic=true)) 
+    end  
+end
+
+# this function defines rewrite rules generate by single transition
+# here i should be []. and it generate only one single person without state
+function make_rule_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+    LIR = singleTransitionLIR_SingleObject(ss,l,i,r,obn)
+    mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)   
+end
+
+function infectiousruleLIR_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
     l = vectorify(l)
     i = vectorify(i)
     r = vectorify(r)
     L = coproduct([representable_SingleObject(ss,p,obn) for p in l]) |> apex
     I = coproduct([representable_SingleObject(ss,[],obn),representable_SingleObject(ss,i,obn)]) |> apex
     R = coproduct([representable_SingleObject(ss,p,obn) for p in r]) |> apex
-    Rule(homomorphism(I,L),homomorphism(I,R)) 
+    return [L,I,R] 
+end
+
+function make_infectious_rule_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+    LIR = infectiousruleLIR_SingleObject(ss, l, i, r, obn)
+    mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)  
 end
 
 ## create a representable of multiple object schema
@@ -130,30 +156,40 @@ function representable_MultipleObjects(ss::AbstractUnitStateChart,as=[],obn::Sym
     return rep
 end
 
-# this function defines rewrite rules generate by single transition
-# here i should be []. and it generate only one single person without state
-function make_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
+# return the L, I and R object for single transition rewrite rules
+function singleTransitionLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
     l = vectorify(l)
     i = vectorify(i)
     r = vectorify(r)
-    L,I,R = [representable_MultipleObjects(ss,x,obn) for x in [l,i,r]]
-    Rule(homomorphism(I,L;monic=true),homomorphism(I,R;monic=true)) 
+    return [representable_MultipleObjects(ss,x,obn) for x in [l,i,r]] # array of LIR   
 end
 
-function make_infectious_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
+# this function defines rewrite rules generate by single transition
+# here i should be []. and it generate only one single person without state
+function make_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+    LIR = singleTransitionLIR_MultipleObjects(ss,l,i,r,obn)
+    mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)     
+end
+
+function infectiousruleLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
     l = vectorify(l)
     i = vectorify(i)
     r = vectorify(r)
     L = coproduct([representable_MultipleObjects(ss,p,obn) for p in l]) |> apex
     I = coproduct([representable_MultipleObjects(ss,[],obn),representable_MultipleObjects(ss,i,obn)]) |> apex
     R = coproduct([representable_MultipleObjects(ss,p,obn) for p in r]) |> apex
-    Rule(homomorphism(I,L;monic=true),homomorphism(I,R;monic=true)) 
+    return [L,I,R]
+end
+
+function make_infectious_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+    LIR = infectiousruleLIR_MultipleObjects(ss,l,i,r,obn)
+    mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)  
 end
 
 # generate the rewrite rule
 # t is the index of a transition
 # transitions_rules is an array with pair of (timer, rule) as its elements
-function get_rule(ss::AbstractUnitStateChart,t,transitions_rules,obn::Symbol=:P;is_schema_singObject::Bool=true)
+function get_rule(ss::AbstractUnitStateChart,t,transitions_rules,obn::Symbol=:P;is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
     tt = ttype(ss,t)
     if tt == RLT
         tidx=Int(texpr(ss,t))
@@ -164,7 +200,19 @@ function get_rule(ss::AbstractUnitStateChart,t,transitions_rules,obn::Symbol=:P;
         r = sname(ss,ttarget(ss,t))
         statechart = dname(ss,l)
         attrtype = homs_name(obn,statechart)
-        return is_schema_singObject ? make_rule_SingleObject(ss,[attrtype=>l],[],[attrtype=>r],obn) : make_rule_MultipleObjects(ss,[l],[],[r],obn)
+        if is_schema_singObject
+            if !use_DataMigration
+                return make_rule_SingleObject(ss,[attrtype=>l],[],[attrtype=>r],obn)
+            else 
+                return make_rule_SingleObject(ss,[attrtype=>l],[],[attrtype=>r],obn; use_DataMigration = true, acset = acset, migration_rule=migration_rule)
+            end
+        else # multiple object schema
+            if !use_DataMigration
+                return make_rule_MultipleObjects(ss,[l],[],[r],obn)
+            else 
+                return make_rule_MultipleObjects(ss,[l],[],[r],obn; use_DataMigration = true, acset = acset, migration_rule=migration_rule)
+            end  
+        end          
     else
         tn = tname(ss,t)
         throw("transition:$tn does not have valid transition type!")
@@ -189,10 +237,10 @@ function get_timer(ss::AbstractUnitStateChart, transitions_rules,t)
     timer
 end
 
-function make_ABM(ss::AbstractUnitStateChart, transitions_rules, obn=:P;is_schema_singObject::Bool=true) 
+function make_ABM(ss::AbstractUnitStateChart, transitions_rules, obn=:P;is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing) 
     return ABM(map(parts(ss, :T)) do t
         tn = tname(ss, t)
-        ABMRule(tn, get_rule(ss, t,transitions_rules,obn,is_schema_singObject=is_schema_singObject), get_timer(ss,transitions_rules,t))
+        ABMRule(tn, get_rule(ss, t,transitions_rules,obn,is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule), get_timer(ss,transitions_rules,t))
     end, [])
 end
    
