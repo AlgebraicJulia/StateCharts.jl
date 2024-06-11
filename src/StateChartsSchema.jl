@@ -192,6 +192,24 @@ dnames(ss::AbstractStateCharts) = [dname(ss, d) for d in 1:nd(ss)]
 dname(ss::AbstractUnitStateChart,d) = :UnitStateChart
 dnames(ss::AbstractUnitStateChart) = [:UnitStateChart]
 
+# schema having the hazard rates of transitions can depend on states. And the logic of the expression of the hazard rates of transitions
+# are captured by GatExpr. Object representing Links from states to transitions is also included in this schema.
+#@present TheoryLinkedStateCharts <: TheoryStateCharts begin
+
+#    L::Ob # links from objects to transitions
+    
+#    lsrc::Hom(L,S)    
+#    ltgt::Attr(L, T)
+#end
+
+#@abstract_acset_type AbstractLinkedStateCharts <: AbstractStateCharts
+#@acset_type LinkedStateChartsUntype(TheoryLinkedStateCharts) <: AbstractLinkedStateCharts
+#const LinkedStateCharts = LinkedStateChartsUntype{Symbol,GATExpr{T},Symbol} # TODO: replace {T} to concrete expressions
+
+
+
+
+
 end
 
 

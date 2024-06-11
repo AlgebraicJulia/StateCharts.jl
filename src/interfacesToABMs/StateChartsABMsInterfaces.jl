@@ -80,7 +80,6 @@ StateChartCset_MultipleObjects(ss::AbstractUnitStateChart,obn::Symbol=:P) = Anon
 function representable_SingleObject(ss::AbstractUnitStateChart,as=[],obn::Symbol=:P)
     rep = StateChartCset_SingleObject(ss,obn)
     as = vectorify(as)
-    println(as)
     # add the attributes have vaules
     [add_part!(rep,obn;x[1]=>x[2]) for x in as]
     # add the attributes without values
@@ -110,9 +109,6 @@ function mk_rule(LIR; use_DataMigration::Bool = false, acset=nothing, migration_
         return Rule(homomorphism(I,L;monic=true),homomorphism(I,R;monic=true)) 
     else
         Lm,Im,Rm = [migrate(acset, lir, migration_rule) for lir in LIR]
-        println(Lm)
-        println(Im)
-        println(Rm)
         return Rule(homomorphism(Im,Lm;monic=true),homomorphism(Im,Rm;monic=true)) 
     end  
 end
@@ -150,7 +146,6 @@ function representable_MultipleObjects(ss::AbstractUnitStateChart,as=[],obn::Sym
     # add the object of person
     add_part!(rep,obn)
     # add the (state) objects to L, I and R
-    println(as)
     [add_part!(rep, s; homs_name(s,obn)=>i) for (i,s) in enumerate(as)]
 
     return rep
@@ -237,10 +232,11 @@ function get_timer(ss::AbstractUnitStateChart, transitions_rules,t)
     timer
 end
 
-function make_ABM(ss::AbstractUnitStateChart, transitions_rules, obn=:P;is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing) 
-    return ABM(map(parts(ss, :T)) do t
+function make_ABM(ss::AbstractUnitStateChart, transitions_rules, obn=:P;is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing, schema=nothing) 
+    return ABM(schema,
+    map(parts(ss, :T)) do t
         tn = tname(ss, t)
-        ABMRule(tn, get_rule(ss, t,transitions_rules,obn,is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule), get_timer(ss,transitions_rules,t))
+        ABMRule(tn, get_rule(ss, t,transitions_rules,obn,is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule), get_timer(ss,transitions_rules,t);schema=schema)
     end, [])
 end
    

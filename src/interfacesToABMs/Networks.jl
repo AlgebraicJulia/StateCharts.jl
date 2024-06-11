@@ -2,7 +2,7 @@
 module Networks
 
 export SchDirectedNetwork, SchUndirectedNetwork, SchUndirectedReflectiveNetwork, SchPVArrow, SchPVSpan,
-       smallworldNetWork, Graph
+       smallworldNetWork, Graph, res_groups
 
 #using Catlab.Graphs.BasicGraphs
 using Catlab
@@ -73,14 +73,49 @@ smallworldNetWork(n, d, p) = begin
     return g=>nw
 end
 
+##### visualizations #####
+# t: time step
+# s: symbol of state
+# obn: symbol, the object name of persons
+function res_state(res,t,s,obn)
+    t = Int(t)
+    if t == 0
+        states = res.init
+    else
+        states = codom.(right.(res.hist))[t]
+    end
+    vs = [subpart(states,n,s*obn) for n in 1:nparts(states,s)]
+    return vs
+end
+
+function statecolor(colorgroups, colors, s)
+    idx_colors = Dict(c=>i for (i, c) in enumerate(colors))
+    return idx_colors[colorgroups[s]]
+end
+
+# return the input argument of "membership" for Graph function
+# res: the results of run!()
+# t: time step 
+# states: the states of the model
+# pop: total population
+# colors: the set of colors
+# colorgroups: the Dict of state=>color
+# obn: the symbol of the object of persons
+function res_groups(res,t,states,pop,colors,colorgroups,obn)
+    groups = zeros(Int64,Int(pop))
+    for s in states
+        for v in res_state(res,t,s,obn)
+            groups[v] = Int(statecolor(colorgroups, colors, s))
+        end
+    end
+    groups
+end
+
 ## functions to plot out the graphs
-Graph(g::NormalGraphs.SimpleGraph, membership, nodecolor) = begin
-    #membership = [1,1,1,1,1,1,1,1,2,1,1,1,1,1,2,2,1,1,2,1,2,1,2,2,2,2,2,2,2,2,2,2,2,2]
-    #nodecolor = [colorant"lightseagreen", colorant"red"]
-    # membership color
+Graph(g::NormalGraphs.SimpleGraph, membership, nodecolor, nodesizescale) = begin
     nodefillc = nodecolor[membership]
     nodelabel = collect(1:NormalGraphs.nv(g))
-    gplot(g, nodefillc=nodefillc, nodelabel=nodelabel)
+    gplot(g, nodefillc=nodefillc, nodelabel=nodelabel, nodelabelsize=ones(NormalGraphs.nv(g))*nodesizescale)
 end
 
 Graph(g::HasGraph) = to_graphviz(g)
