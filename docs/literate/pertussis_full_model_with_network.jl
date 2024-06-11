@@ -6,6 +6,7 @@ using DataMigrations
 using AlgebraicABMs
 using AlgebraicRewriting
 using Catlab
+using Catlab: codom, right
 import Base: *
 
 ENV["JULIA_DEBUG"] = "AlgebraicABMs"; 
@@ -267,15 +268,3 @@ StateCharts.Graph(first(nw),groups100,colors,0.3)
 
 # plot out the results of time series
 Makie.plot(res; Dict(o=>X->nparts(X,o) for o in states)...)
-
-for i in 1:nt(pertussisStatechart)
-    println("transition " * string(i) * " :")
-    R=codom(right(get_rule(pertussisStatechart,i,transitions_rules_migrated,:V;is_schema_singObject=false, use_DataMigration=true, acset=PertussisModelStaticNet, migration_rule=migration_rule)))
-    println(R)
-end
-
-
-
-codom(right(get_rule(pertussisStatechart,i,transitions_rules_migrated,:V;is_schema_singObject=false, use_DataMigration=true, acset=PertussisModelStaticNet, migration_rule=migration_rule)))
-
-
