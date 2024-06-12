@@ -5,7 +5,7 @@ module StateChartsSchema
 export UnitStateChartF, TheoryUnitStateChart, AbstractUnitStateChart, UnitStateChart,
 StateChartsF, TheoryStateCharts, AbstractStateCharts, StateCharts,
 ns, nt, nal, sname, snames, tname, tnames, aname, anames, texpr, dname, dnames,
-ttype, tsource, ttarget, etarget, alsource, alsources, altarget, altargets
+ttype, tsource, ttarget, etarget, alsource, alsources, altarget, altargets, spartition
 
 using Catlab
 
@@ -183,6 +183,8 @@ StateChartsF(s, t, alt) = begin
 end
 
 nd(ss::AbstractStateCharts) = nparts(ss,:D)
+
+spartition(ss::AbstractStateCharts,s) = subpart(ss,s,:sd)
 
 dname(ss::AbstractStateCharts,d) = subpart(ss,d,:dname) 
 dnames(ss::AbstractStateCharts) = [dname(ss, d) for d in 1:nd(ss)]

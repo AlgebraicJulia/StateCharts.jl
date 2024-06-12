@@ -2,7 +2,8 @@ module StateChartsABMsInterfaces
 
 export StateChartABMSchema_SingleObject, StateChartABMSchema_MultipleObjects, StateChartCset_SingleObject, StateChartCset_MultipleObjects,
 make_rule_SingleObject, make_infectious_rule_SingleObject, make_rule_MultipleObjects, make_infectious_rule_MultipleObjects, get_rule,
-get_timer, make_ABM
+get_timer, make_ABM,
+representable_MultipleObjects
 
 using AlgebraicABMs, AlgebraicRewriting, Catlab
 using Random
@@ -58,8 +59,11 @@ function StateChartABMSchema_MultipleObjects(ss::AbstractUnitStateChart,obn::Sym
     # generate the list of morphisms
     morphisms_names = map((x,y)-> homs_name(x,y), snames(ss), repeat([obn],length(snames(ss))))
     morphisms = map((x,y,z)->(x,y,z),morphisms_names,snames(ss),repeat([obn],length(snames(ss))))
+    # add the attribute of ID to track the individuals
+    attrsType = [:ID]
+    attrsTuple = [(homs_name(obn,:ID), obn, :ID)]
     # create the schema
-    schema = BasicSchema(obs, morphisms)
+    schema = BasicSchema(obs, morphisms, attrsType, attrsTuple)
     # return the cset generated
     schema       
 end
@@ -72,7 +76,7 @@ function StateChartCset_SingleObject(ss::AbstractUnitStateChart,obn::Symbol=:P)
     acset
 end
 
-StateChartCset_MultipleObjects(ss::AbstractUnitStateChart,obn::Symbol=:P) = AnonACSet(StateChartABMSchema_MultipleObjects(ss,obn))  
+StateChartCset_MultipleObjects(ss::AbstractUnitStateChart,obn::Symbol=:P) = AnonACSet(StateChartABMSchema_MultipleObjects(ss,obn);type_assignment=Dict(:ID=>Int64))  
 
 ## create a representable of single object schema
 ## this is an instance with one person, and the attributes values given by a vecoter of pairs e.g.,[:Inf=>:R,:Healthy=>:H] (Attr=>state). Then the rest attributes
@@ -137,14 +141,15 @@ end
 
 ## create a representable of multiple object schema
 ## this is an instance with one person, and each state (may accross multiple state charts) is an object point to the person
-## as is a vector of the state the person is in. e.g., as =[:S,:H], which indicates this person is Susceptible and Healthy
-## NOTE: if input [], then create a single person without any states
-function representable_MultipleObjects(ss::AbstractUnitStateChart,as=[],obn::Symbol=:P)
+## as a set of states. e.g., as =[:S,:H], which indicates this person is Susceptible and Healthy. ID attributes is a variable
+## NOTE: if represent a single person, without any states, it can write as []. But this indicates a person with a variable attributes ID
+function representable_MultipleObjects(ss::AbstractUnitStateChart,as,obn::Symbol=:P)
+    println(as)
     rep = StateChartCset_MultipleObjects(ss,obn)
     as = vectorify(as)
 
     # add the object of person
-    add_part!(rep,obn)
+    add_part!(rep,obn;homs_name(obn,:ID)=>AttrVar(add_part!(rep,:ID)))
     # add the (state) objects to L, I and R
     [add_part!(rep, s; homs_name(s,obn)=>i) for (i,s) in enumerate(as)]
 
@@ -153,9 +158,6 @@ end
 
 # return the L, I and R object for single transition rewrite rules
 function singleTransitionLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
-    l = vectorify(l)
-    i = vectorify(i)
-    r = vectorify(r)
     return [representable_MultipleObjects(ss,x,obn) for x in [l,i,r]] # array of LIR   
 end
 
@@ -177,6 +179,9 @@ function infectiousruleLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, 
 end
 
 function make_infectious_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+    l = vectorify(l)
+    i = vectorify(i)
+    r = vectorify(r)
     LIR = infectiousruleLIR_MultipleObjects(ss,l,i,r,obn)
     mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)  
 end
@@ -193,7 +198,7 @@ function get_rule(ss::AbstractUnitStateChart,t,transitions_rules,obn::Symbol=:P;
         # we assume all the states of other state charts are all unkown (set as variables)
         l = sname(ss,tsource(ss,t))
         r = sname(ss,ttarget(ss,t))
-        statechart = dname(ss,l)
+        statechart = dname(ss,spartition(ss,tsource(ss,t)))
         attrtype = homs_name(obn,statechart)
         if is_schema_singObject
             if !use_DataMigration

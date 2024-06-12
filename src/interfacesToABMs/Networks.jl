@@ -6,6 +6,7 @@ export SchDirectedNetwork, SchUndirectedNetwork, SchUndirectedReflectiveNetwork,
 
 #using Catlab.Graphs.BasicGraphs
 using Catlab
+using Catlab: codom, right
 import Graphs as NormalGraphs
 using GraphPlot
 import ..Visualization: Graph
@@ -23,7 +24,8 @@ SchDirectedNetwork = SchGraph
 #   tgt::Hom(E,V)
 # end
 
-SchUndirectedNetwork = SchSymmetricGraph
+SchUndirectedNetwork = SchSymmetricGraph 
+
 
 # # Symmetric graphs
 #
@@ -74,19 +76,30 @@ smallworldNetWork(n, d, p) = begin
 end
 
 ##### visualizations #####
+# return each time's model result's instance
+function res_state(res,t)
+    t = Int(t)
+    if t == 0
+        state = res.init
+    else
+        state = codom.(right.(res.hist))[t]
+    end
+    return state
+end
+
 # t: time step
 # s: symbol of state
 # obn: symbol, the object name of persons
-function res_state(res,t,s,obn)
-    t = Int(t)
-    if t == 0
-        states = res.init
-    else
-        states = codom.(right.(res.hist))[t]
-    end
+
+# return the list of persons of each state (s)
+function res_state_agents(res,t,s,obn)
+    states = res_state(res,t)
     vs = [subpart(states,n,s*obn) for n in 1:nparts(states,s)]
     return vs
 end
+
+# return the list of each person's ID
+res_state_agents_id(res,t,s,obn) = [subpart(states,p,obn*:ID) for p in res_state_agents(res,t,s,obn)]
 
 function statecolor(colorgroups, colors, s)
     idx_colors = Dict(c=>i for (i, c) in enumerate(colors))
@@ -104,7 +117,7 @@ end
 function res_groups(res,t,states,pop,colors,colorgroups,obn)
     groups = zeros(Int64,Int(pop))
     for s in states
-        for v in res_state(res,t,s,obn)
+        for v in res_state_agents(res,t,s,obn)
             groups[v] = Int(statecolor(colorgroups, colors, s))
         end
     end
@@ -112,9 +125,10 @@ function res_groups(res,t,states,pop,colors,colorgroups,obn)
 end
 
 ## functions to plot out the graphs
-Graph(g::NormalGraphs.SimpleGraph, membership, nodecolor, nodesizescale) = begin
+Graph(g::NormalGraphs.SimpleGraph, res, t, membership, nodecolor, nodesizescale) = begin    
     nodefillc = nodecolor[membership]
-    nodelabel = collect(1:NormalGraphs.nv(g))
+    states = res_state(res,t)
+    nodelabel = [subpart(states,p,obn*:ID) for p in collect(1:NormalGraphs.nv(g))] # labelled by the ID
     gplot(g, nodefillc=nodefillc, nodelabel=nodelabel, nodelabelsize=ones(NormalGraphs.nv(g))*nodesizescale)
 end
 

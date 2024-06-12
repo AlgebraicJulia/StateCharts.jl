@@ -40,7 +40,9 @@ smoke_healthy = StateChartsF((:SmokeStateChart=>(:NS,:CS,:PS),(:HealthyStateChar
 
 @test snames(smoke_healthy) == [:NS,:CS,:PS,:UH,:H]
 @test tnames(smoke_healthy) == [:initiate,:quit,:relapse,:sick,:recover]
-
+@test spartition(smoke_healthy,1) == 1
+@test dname(smoke_healthy,1) == :SmokeStateChart
+@test dnames(smoke_healthy) == [:SmokeStateChart,:HealthyStateChart]
 
 Graph(smoke_healthy)
 
