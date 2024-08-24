@@ -42,28 +42,35 @@ IContacts_idx = Dict(:StoI=>1:3,
                         :R3toR4=>16:18,
                         :V3toR4=>19:21)
 
-# define the states
-states = [:Susceptible,
+# define the states, including:
 # 3 incubation states, with decreasing levels of coming virulence
+# 3 infective states, with decreasing levels of virulence
+# 4 recovered states, with INCREASING levels of protection
+# 4 Vaccinated states, with INCREASING levels of protection
+states = [:Susceptible,
 :Incubation_I,
 :Incubation_Im, 
 :Incubation_Iw,
-# infective states, with decreasing levels of virulence
 :Infective_I,
 :Infective_Im, 
 :Infective_Iw,
-# recovered states, with INCREASING levels of protection
 :Recovered_1,
 :Recovered_2,
 :Recovered_3,
 :Recovered_4,
-# recovered states, with INCREASING levels of protection
 :Vaccinated_1,
 :Vaccinated_2,
 :Vaccinated_3,
 :Vaccinated_4]
 
 # create the pertussis state chart
+
+# UnitStateChartF takes in 3 input arguments:
+# states: tuple/array of all states
+# transitions: tuple/array of all transitions. The syntax of each transition:
+#              transition_name => (source_state => target_state, tranisiton_type => values)
+# alternative transitions: tuple/array of all alternative transitions. The syntax of each altanative transition:
+#              :source_transition_name=>((alternative_transition_name, probability_value) => target_state)
 pertussisStatechart = UnitStateChartF(states, # states
     (   
         # we deal here with transitions from Susceptible.
@@ -125,9 +132,16 @@ pertussisStatechart = UnitStateChartF(states, # states
 # plot out the state chart
 StateCharts.Graph(pertussisStatechart)
 
-# define the rewrite rules for contacts of Infectives
-# Note that each transitions_rule has a pair timer=>rule
+######  define the user_defined rewrite rules: rewrite rules for contacts of Infectives
+######  Note that each transitions_rule has a pair timer=>rule
+
+# helper function takes in two arguments:
+# S: state of being infected: :Susceptible, :Vaccinated_1, :Vaccinated_2, :Vaccinated_3, :Recovered_1, :Recovered_2 or :Recovered_3
+# I: state of infectives: :I, :Im or :Iw
+# returns three arrays: states including in the ACSet of L, I and R, where L <- I -> R is the rewrite rule
 f_infective_collect(S::Symbol,I::Symbol) = map(x->[[[S],[x]],[x],[[I],[x]]],Infectives)
+
+# define the user_defined rewrite rules
 transitions_rules = [map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...,:V),β,f_infective_collect(:Susceptible,:Incubation_I))...,
                      map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...,:V),β,f_infective_collect(:Vaccinated_1,:Incubation_I))...,
                      map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...,:V),β,f_infective_collect(:Recovered_1,:Incubation_Im))...,
@@ -158,11 +172,36 @@ end
 to_graphviz(schema_model; prog="dot")
 
 ################# define the data migration rule to automatically migrate rewrite rules from pure state chart schema to the compose model shema ######################
-@acset_type PertussisStateChart(schema_statechart, index=[:src,:tgt])
-@acset_type PertussisModelStaticNet(schema_model, index=[:src,:tgt])
+@acset_type PertussisStateChart(schema_statechart, index=[:src,:tgt]){Int64}
+@acset_type PertussisModelStaticNet(schema_model, index=[:src,:tgt]){Int64}
+
+#=
+const yPertussisStateChart = yoneda_cache(PertussisStateChart{Int64}; clear=false)
+
+inf_l = @acset_colim yPertussisStateChart begin
+    s::Susceptible
+    i::Infective_I
+end
+
+inf_m = @acset_colim yPertussisStateChart begin
+    v::V
+    i::Infective_I
+end
+
+inf_r = @acset_colim yPertussisStateChart begin
+    e::Incubation_I
+    i::Infective_I
+end
+
+inf_l_net = migrate(PertussisModelStaticNet,inf_l,migration_rule)
+inf_m_net = migrate(PertussisModelStaticNet,inf_m,migration_rule)
+
+homomorphism(inf_m_net,inf_l_net)
+=#
 
 const migration_rule = @migration schema_model schema_statechart begin
-    V => V
+    V => V; 
+    ID=>ID; VID => VID
     Susceptible => Susceptible; SusceptibleV => SusceptibleV
     Incubation_I => Incubation_I; Incubation_IV => Incubation_IV
     Incubation_Im => Incubation_Im; Incubation_ImV => Incubation_ImV
@@ -191,6 +230,7 @@ const migration_rule = @migration schema_model schema_statechart begin
     end
 end
 
+
 # currently should define the migrated user_defined rewriting rules by call the function "make_infectious_rule_MultipleObjects" again:
 # this is not perfect now
 # TODO: have helper_functions for auto convert to migrated user defined rules
@@ -204,16 +244,17 @@ transitions_rules_migrated = [map((x,y)->ContinuousHazard(1/(c*x))=>make_infecti
 ];
 
 # define small world network
-average_connections = 3
+average_connections = 4
 p_random_connect = 0.1
 nw = smallworldNetWork(Int(totalPopulation), average_connections, p_random_connect);
 network = last(nw)
 
 # define the initial state
 init = PertussisModelStaticNet()
-copy_parts!(init, network)
+copy_parts!(init, network) # set the vertices' ID
+set_subpart!(init, 1:Int(totalPopulation), :VID, 1:Int(totalPopulation))
 add_parts!(init,:Susceptible,Int(totalPopulation-1),SusceptibleV=2:totalPopulation)
-add_part!(init,:Infective_I,Infective_IV=1)
+add_parts!(init,:Infective_I,1,Infective_IV=1:1)
 
 ## define the state colors of the states of ABM models
 ## Susceptible => 1, Infective_I => 2
@@ -243,6 +284,15 @@ colors = [colorant"green1",colorant"red",colorant"lightgray",colorant"pink"];
 
 # run the ABM model
 ABMrules = make_ABM(pertussisStatechart,transitions_rules_migrated,:V;is_schema_singObject=false,use_DataMigration=true, acset=PertussisModelStaticNet, migration_rule=migration_rule,schema=schema_model);
+
+rule = get_rule(pertussisStatechart, 1, transitions_rules_migrated,:V;is_schema_singObject=false, use_DataMigration = true, acset=PertussisModelStaticNet, migration_rule=migration_rule)
+timer = get_timer(pertussisStatechart, transitions_rules_migrated,1)
+tn = tname(pertussisStatechart, 1)
+
+ABMRule(tn, rule, timer)
+
+#ABMrules = make_ABM(pertussisStatechart,transitions_rules,:V,is_schema_singObject=false)
+#Net = Migrate(schema_statechart,PertussisStateChart,schema_model,PertussisModelStaticNet; delta=false)
 res = run!(ABMrules, init; maxtime=100);
 
 # plot the network graphs at initial state t = 0
@@ -250,7 +300,7 @@ groups0 = res_groups(res,0,states,totalPopulation,colors,colorgroups,:V)
 StateCharts.Graph(first(nw),groups0,colors,0.3)
 
 # plot the network graphs at initial state t = 10
-groups10 = res_groups(res,10,states,totalPopulation,colors,colorgroups,:V)
+groups10 = res_groups(res,2,states,totalPopulation,colors,colorgroups,:V)
 StateCharts.Graph(first(nw),groups10,colors,0.3)
 
 # plot the network graphs at initial state t = 40

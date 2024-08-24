@@ -2,14 +2,16 @@
 module Networks
 
 export SchDirectedNetwork, SchUndirectedNetwork, SchUndirectedReflectiveNetwork, SchPVArrow, SchPVSpan,
-       smallworldNetWork, Graph, res_groups
+       smallworldNetWork, Graph, Graph_init, res_state
 
-#using Catlab.Graphs.BasicGraphs
 using Catlab
 using Catlab: codom, right
+using Catlab.Graphics.Graphviz
 import Graphs as NormalGraphs
-using GraphPlot
 import ..Visualization: Graph
+import Base: *
+
+*(x::Symbol, y::Symbol) = Symbol(String(x)*String(y))
 
 # using basic graph schemas as the schema of basic networks
 SchDirectedNetwork = SchGraph
@@ -72,7 +74,7 @@ smallworldNetWork(n, d, p) = begin
 
     nw = SymmetricReflexiveGraph(NormalGraphs.nv(g))
     [Catlab.add_edge!(nw, NormalGraphs.src(ges[i]), NormalGraphs.dst(ges[i])) for i in 1:length(ges)]
-    return g=>nw
+    return nw
 end
 
 ##### visualizations #####
@@ -87,51 +89,63 @@ function res_state(res,t)
     return state
 end
 
-# t: time step
-# s: symbol of state
-# obn: symbol, the object name of persons
-
-# return the list of persons of each state (s)
-function res_state_agents(res,t,s,obn)
-    states = res_state(res,t)
-    vs = [subpart(states,n,s*obn) for n in 1:nparts(states,s)]
-    return vs
-end
-
-# return the list of each person's ID
-res_state_agents_id(res,t,s,obn) = [subpart(states,p,obn*:ID) for p in res_state_agents(res,t,s,obn)]
-
-function statecolor(colorgroups, colors, s)
-    idx_colors = Dict(c=>i for (i, c) in enumerate(colors))
-    return idx_colors[colorgroups[s]]
-end
-
-# return the input argument of "membership" for Graph function
-# res: the results of run!()
-# t: time step 
-# states: the states of the model
-# pop: total population
-# colors: the set of colors
-# colorgroups: the Dict of state=>color
-# obn: the symbol of the object of persons
-function res_groups(res,t,states,pop,colors,colorgroups,obn)
-    groups = zeros(Int64,Int(pop))
+get_state(g, states, v, obn=:V) = begin
     for s in states
-        for v in res_state_agents(res,t,s,obn)
-            groups[v] = Int(statecolor(colorgroups, colors, s))
+        if length(incident(g, v, s*obn)) > 0
+            return s
         end
     end
-    groups
 end
 
-## functions to plot out the graphs
-Graph(g::NormalGraphs.SimpleGraph, res, t, membership, nodecolor, nodesizescale) = begin    
-    nodefillc = nodecolor[membership]
-    states = res_state(res,t)
-    nodelabel = [subpart(states,p,obn*:ID) for p in collect(1:NormalGraphs.nv(g))] # labelled by the ID
-    gplot(g, nodefillc=nodefillc, nodelabel=nodelabel, nodelabelsize=ones(NormalGraphs.nv(g))*nodesizescale)
+get_state_color(g, statesColors, v, obn=:V) = begin
+    states = keys(statesColors) |> collect
+    return statesColors[get_state(g, states, v, obn)]
 end
 
-Graph(g::HasGraph) = to_graphviz(g)
+def_node(g, statesColors, v, obn=:V) = ("n$v", Attributes(:label=>"$(subpart(g,v,obn*:ID))",
+                                     :shape=>"circle", 
+                                     :color=>"black", 
+                                     :style=>"filled", 
+                                     :fillcolor=>get_state_color(g, statesColors, v, obn),
+                                     :width=>"0.25",
+                                     :fontsize=>"8pt",
+                                     :fixedsize => "true"))
+def_edge(g, s, t) =  ([s, t],Attributes(:arrowhead => "none",
+                                        :weight => "3.0"))
+
+subGraph(g, n, statesColors::Dict{Symbol, String}, obn::Symbol=:V) = begin
+    
+    stmts = Graphviz.Statement[]
+
+    for v in 1:nparts(g,obn)
+        push!(stmts, Node(def_node(g,statesColors,v,obn)...))
+    end
+
+    for k in 1:nparts(g,:E)
+        if !(k ∈ refl(g)) && (k <= inv(g, k))
+            s = "n$(src(g,k))"
+            t = "n$(tgt(g,k))"
+            push!(stmts,Edge(def_edge(g,s,t)...))
+        end
+    end
+
+    graph_attrs = Attributes(:rankdir=>"LR", :rank => "same", 
+                             :label=>"time step = $(string(n))", :labelloc=>"t")
+    
+    gr = Graphviz.Digraph("G", stmts; graph_attrs=graph_attrs, prog="neato")
+
+    return gr
+end
+
+Graph_init(g, statesColors::Dict{Symbol, String}, obn::Symbol=:V) = subGraph(g, 0, statesColors, obn)
+
+Graph(res, n::Int,  statesColors::Dict{Symbol, String}, obn::Symbol=:V) = subGraph(res_state(res,n), n, statesColors, obn)
+
+# algorithms generating graph node positions
+# the algorithm plans to be cited from the paper of "Efficient ahd High Quality Force-Directed Graph Drawing": http://yifanhu.net/PUB/graph_draw_small.pdf
+# in the future, probably we can use the julia package "NetworkLayout": "https://github.com/JuliaGraphs/NetworkLayout.jl/tree/master" to generate the positions
+# of nodes for different layouts needs.
+
+
 
 end

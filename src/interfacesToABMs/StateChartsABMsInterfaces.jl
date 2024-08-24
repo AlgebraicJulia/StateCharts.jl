@@ -3,10 +3,10 @@ module StateChartsABMsInterfaces
 export StateChartABMSchema_SingleObject, StateChartABMSchema_MultipleObjects, StateChartCset_SingleObject, StateChartCset_MultipleObjects,
 make_rule_SingleObject, make_infectious_rule_SingleObject, make_rule_MultipleObjects, make_infectious_rule_MultipleObjects, get_rule,
 get_timer, make_ABM,
-representable_MultipleObjects
+representable_MultipleObjects, radomlyAssignInitialInfectives
 
 using AlgebraicABMs, AlgebraicRewriting, Catlab
-using Random
+using StatsBase
 using ..StateChartsSchema
 
 #import AlgebraicRewriting.Incremental.IncrementalSum: IncSumHomSet
@@ -76,7 +76,9 @@ function StateChartCset_SingleObject(ss::AbstractUnitStateChart,obn::Symbol=:P)
     acset
 end
 
-StateChartCset_MultipleObjects(ss::AbstractUnitStateChart,obn::Symbol=:P) = AnonACSet(StateChartABMSchema_MultipleObjects(ss,obn);type_assignment=Dict(:ID=>Int64))  
+StateChartCset_MultipleObjects(ss::AbstractUnitStateChart,obn::Symbol=:P) = AnonACSet(StateChartABMSchema_MultipleObjects(ss,obn);type_assignment=Dict(:ID=>Symbol))  
+
+##### TODO: need to test the functions of "singObject" and combination of DataMigration
 
 ## create a representable of single object schema
 ## this is an instance with one person, and the attributes values given by a vecoter of pairs e.g.,[:Inf=>:R,:Healthy=>:H] (Attr=>state). Then the rest attributes
@@ -98,19 +100,17 @@ end
 # this function defines rewrite rules generate by single transition
 # here i should be []. and it generate only one single person without state
 function singleTransitionLIR_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
-    l = vectorify(l)
-    i = vectorify(i)
-    r = vectorify(r)
     L,R = [representable_SingleObject(ss,x,obn) for x in [l,r]]
     I = representable_SingleObject(ss,i,obn)
     return [L,I,R]
 end
 
+#inf_net = Rule(only(homomorphisms(inf_m_net,inf_l_net;monic=[:V])),only(homomorphisms(inf_m_net,inf_r_net;monic=[:V],initial=(I=[2],))))
 
-function mk_rule(LIR; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+function mk_rule(LIR; obn::Symbol=:P, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
     L,I,R = LIR
     if !use_DataMigration
-        return Rule(homomorphism(I,L;monic=true),homomorphism(I,R;monic=true)) 
+        return Rule(homomorphism(I,L;monic=true),homomorphism(I,R;monic=true))
     else
         Lm,Im,Rm = [migrate(acset, lir, migration_rule) for lir in LIR]
         return Rule(homomorphism(Im,Lm;monic=true),homomorphism(Im,Rm;monic=true)) 
@@ -121,13 +121,10 @@ end
 # here i should be []. and it generate only one single person without state
 function make_rule_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
     LIR = singleTransitionLIR_SingleObject(ss,l,i,r,obn)
-    mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)   
+    mk_rule(LIR;use_DataMigration = use_DataMigration, obn=obn, acset = acset, migration_rule=migration_rule)   
 end
 
 function infectiousruleLIR_SingleObject(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
-    l = vectorify(l)
-    i = vectorify(i)
-    r = vectorify(r)
     L = coproduct([representable_SingleObject(ss,p,obn) for p in l]) |> apex
     I = coproduct([representable_SingleObject(ss,[],obn),representable_SingleObject(ss,i,obn)]) |> apex
     R = coproduct([representable_SingleObject(ss,p,obn) for p in r]) |> apex
@@ -138,6 +135,7 @@ function make_infectious_rule_SingleObject(ss::AbstractUnitStateChart, l, i, r, 
     LIR = infectiousruleLIR_SingleObject(ss, l, i, r, obn)
     mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)  
 end
+############################### end of the functions of "singleObject" ################################################################
 
 ## create a representable of multiple object schema
 ## this is an instance with one person, and each state (may accross multiple state charts) is an object point to the person
@@ -156,22 +154,14 @@ function representable_MultipleObjects(ss::AbstractUnitStateChart,as,obn::Symbol
     return rep
 end
 
-# return the L, I and R object for single transition rewrite rules
-function singleTransitionLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
-    return [representable_MultipleObjects(ss,x,obn) for x in [l,i,r]] # array of LIR   
-end
-
 # this function defines rewrite rules generate by single transition
 # here i should be []. and it generate only one single person without state
 function make_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
-    LIR = singleTransitionLIR_MultipleObjects(ss,l,i,r,obn)
-    mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)     
+    LIR = [representable_MultipleObjects(ss,x,obn) for x in [l,i,r]]
+    mk_rule(LIR;obn=obn, use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)     
 end
 
 function infectiousruleLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
-    l = vectorify(l)
-    i = vectorify(i)
-    r = vectorify(r)
     L = coproduct([representable_MultipleObjects(ss,p,obn) for p in l]) |> apex
     I = coproduct([representable_MultipleObjects(ss,[],obn),representable_MultipleObjects(ss,i,obn)]) |> apex
     R = coproduct([representable_MultipleObjects(ss,p,obn) for p in r]) |> apex
@@ -179,11 +169,9 @@ function infectiousruleLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, 
 end
 
 function make_infectious_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
-    l = vectorify(l)
-    i = vectorify(i)
-    r = vectorify(r)
     LIR = infectiousruleLIR_MultipleObjects(ss,l,i,r,obn)
-    mk_rule(LIR;use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)  
+    L,I,R = use_DataMigration ? [migrate(acset, lir, migration_rule) for lir in LIR] : LIR
+    return Rule(homomorphism(I,L;monic=[obn]),homomorphism(I,R;monic=[obn],initial=(I=[2],)))
 end
 
 # generate the rewrite rule
@@ -198,7 +186,8 @@ function get_rule(ss::AbstractUnitStateChart,t,transitions_rules,obn::Symbol=:P;
         # we assume all the states of other state charts are all unkown (set as variables)
         l = sname(ss,tsource(ss,t))
         r = sname(ss,ttarget(ss,t))
-        statechart = dname(ss,spartition(ss,tsource(ss,t)))
+#        statechart = dname(ss,spartition(ss,tsource(ss,t)))
+        statechart = dname(ss,t)
         attrtype = homs_name(obn,statechart)
         if is_schema_singObject
             if !use_DataMigration
@@ -237,12 +226,49 @@ function get_timer(ss::AbstractUnitStateChart, transitions_rules,t)
     timer
 end
 
+make_ABMRule(ss::AbstractUnitStateChart,t,transitions_rules, obn::Symbol=:P; is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing) = begin
+    tn = tname(ss, t)
+    rule = get_rule(ss, t,transitions_rules,obn; is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule)
+    timer = get_timer(ss,transitions_rules,t)
+    ABMRule(tn, rule, timer)
+end
+
+make_ABM(ss::AbstractUnitStateChart, transitions_rules, obn=:P;is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing) = begin
+    abmrules = [make_ABMRule(ss,t,transitions_rules, obn; is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset=acset, migration_rule=migration_rule) for t in 1:nt(ss)]
+    ABM(abmrules)
+end
+
+#=
 function make_ABM(ss::AbstractUnitStateChart, transitions_rules, obn=:P;is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing, schema=nothing) 
-    return ABM(schema,
+    return ABM(
     map(parts(ss, :T)) do t
         tn = tname(ss, t)
-        ABMRule(tn, get_rule(ss, t,transitions_rules,obn,is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule), get_timer(ss,transitions_rules,t);schema=schema)
+        println(typeof(tn))
+        ABMRule(tn, get_rule(ss, t,transitions_rules,obn,is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule), get_timer(ss,transitions_rules,t);name=schema)
     end, [])
+end
+=#
+
+# randomly assign "ninf" persons as Infectives, and the rest are all Susceptibles
+function radomlyAssignInitialInfectives(acset, totalPopulation::Int64, ninf::Int64; I::Symbol = :I, S::Symbol = :S, obn::Symbol = :P, network = nothing)
+    init = acset # create an instance of the model based on model schema
+
+    # get the radom samples of infectives
+    infs = sample(1:totalPopulation, ninf, replace = false)
+    # the rest are all Susceptibles
+    spts = findall(!in(infs),1:totalPopulation)
+
+    if isnothing(network)
+        add_parts!(init,obn,totalPopulation;homs_name(obn,:ID)=>map(id->:V*Symbol(id),1:Int(totalPopulation)))
+    else
+        copy_parts!(init, network) # set the vertices' ID
+        set_subpart!(init, 1:Int(totalPopulation), homs_name(obn,:ID), map(id->:V*Symbol(id),1:Int(totalPopulation)))
+    end
+    
+    add_parts!(init,S,Int(totalPopulation-ninf);homs_name(S,obn)=>spts)
+    add_parts!(init,I,ninf;homs_name(I,obn)=>infs)
+
+    return init
 end
    
 end
