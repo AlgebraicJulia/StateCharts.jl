@@ -19,16 +19,18 @@ c = 0.1411 * 10 # calculated by the average value among the 32 age groups in Het
 p_vaccinationRate = 0.76 / 365.0 # per day, auxiliary value
 # The values of "p_incubationPeriodInDay_Im" and "p_incubationPeriodInDay_Iw" refers to the parameter settings in the published paper
 # (in Table 1: https://peerj.com/articles/2337/#table-1), instead of the specfic Anylogic model.
-p_incubationPeriodInDay_I = 10
-p_incubationPeriodInDay_Im = 14
-p_incubationPeriodInDay_Iw = 21
+p_incubationPeriodInDay_I = 10 # unit: days
+p_incubationPeriodInDay_Im = 14 # unit: days
+p_incubationPeriodInDay_Iw = 21 # unit: days
 p_gam = 1 / 21.0
 p_alp = 1 / (5 * 365.0) # waning rate of R
 p_tau = 1 / (2 * 365.0) # waning rate of V
 p_eps = 1 / (100 * 365.0) # waning rate from R1 or V1 to S
 
+# define helper arrays for subgroups
 Incubations = [:Incubation_I, :Incubation_Im, :Incubation_Iw]
 Infectives = [:Infective_I, :Infective_Im, :Infective_Iw]
+# define the index of transitions due to contacting of infectives
 IContacts_idx = Dict(:StoI=>1:3,
                         :V1toI=>4:6,
                         :R1toIm=>7:9,
@@ -43,22 +45,29 @@ states = [:Susceptible,
 :Incubation_I,
 :Incubation_Im, 
 :Incubation_Iw,
-# infective states, with decreasing levels of virulence
+# 3 infective states, with decreasing levels of virulence
 :Infective_I,
 :Infective_Im, 
 :Infective_Iw,
-# recovered states, with INCREASING levels of protection
+# 3 recovered states, with INCREASING levels of protection
 :Recovered_1,
 :Recovered_2,
 :Recovered_3,
 :Recovered_4,
-# recovered states, with INCREASING levels of protection
+# 3 Vaccinated states, with INCREASING levels of protection
 :Vaccinated_1,
 :Vaccinated_2,
 :Vaccinated_3,
 :Vaccinated_4]
 
 # create the pertussis state chart
+
+# UnitStateChartF takes in 3 input arguments:
+# states: tuple/array of all states
+# transitions: tuple/array of all transitions. The syntax of each transition:
+#              transition_name => (source_state => target_state, tranisiton_type => values)
+# alternative transitions: tuple/array of all alternative transitions. The syntax of each altanative transition:
+#              :source_transition_name=>((alternative_transition_name, probability_value) => target_state)
 pertussisStatechart = UnitStateChartF(states, # states
     (   
         # we deal here with transitions from Susceptible.
@@ -114,15 +123,22 @@ pertussisStatechart = UnitStateChartF(states, # states
         :t_transition10_vaccinationFromVaccinated_1=>(:Vaccinated_1=>:Vaccinated_2,:Rate=>p_vaccinationRate),
         :t_transition11_vaccinationFromVaccinated_2=>(:Vaccinated_2=>:Vaccinated_3,:TimeOut=>p_vaccinationRate),
         :t_transition12_vaccinationFromVaccinated_3=>(:Vaccinated_3=>:Vaccinated_4,:TimeOut=>p_vaccinationRate),    
-    ), #non-start transitions
-()# alternatives for non-start transitions
+    ), #transitions
+()# alternatives for transitions
 )
 # plot out the state chart
 StateCharts.Graph(pertussisStatechart)
 
-# define the rewrite rules for contacts of Infectives
-# Note that each transitions_rule has a pair timer=>rule
-f_infective_collect(S::Symbol,I::Symbol) = map(x->[[[S],[x]],[x],[[I],[x]]],Infectives)
+######  define the user_defined rewrite rules: rewrite rules for contacts of Infectives
+######  Note that each transitions_rule has a pair timer=>rule
+
+# helper function takes in two arguments:
+# S: state of being infected: :Susceptible, :Vaccinated_1, :Vaccinated_2, :Vaccinated_3, :Recovered_1, :Recovered_2 or :Recovered_3
+# I: state of infectives: :I, :Im or :Iw
+# returns three arrays: states including in the ACSet of L, I and R, where L <- I -> R is the rewrite rule
+f_infective_collect(S::Symbol,I::Symbol) = map(x->[[[S],[x]],[x],[[I],[x]]],Infectives) 
+
+# define the user_defined rewrite rules
 transitions_rules = [map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...),β,f_infective_collect(:Susceptible,:Incubation_I))...,
                      map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...),β,f_infective_collect(:Vaccinated_1,:Incubation_I))...,
                      map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...),β,f_infective_collect(:Recovered_1,:Incubation_Im))...,
@@ -132,14 +148,20 @@ transitions_rules = [map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_
                      map((x,y)->ContinuousHazard(1/(c*x))=>make_infectious_rule_MultipleObjects(pertussisStatechart,y...),β,f_infective_collect(:Vaccinated_3,:Recovered_4))...
 ];
 
+# Plot out the model schema
+# Note: this step is not nessesary. Here it is only used to show the model schema
+schema_statechart = StateChartABMSchema_MultipleObjects(pertussisStatechart,:P)
+to_graphviz(schema_statechart |> schemaACSet |> schemaPresent; prog="dot")
+
 # define the initial state
 init = StateChartCset_MultipleObjects(pertussisStatechart)
-add_parts!(init,:P,Int(totalPopulation))
-add_parts!(init,:Susceptible,Int(totalPopulation-1),SusceptibleP=1)
+add_parts!(init,:P,Int(totalPopulation),PID=1:totalPopulation)
+add_parts!(init,:Susceptible,Int(totalPopulation-1),SusceptibleP=2:totalPopulation)
 add_part!(init,:Infective_I,Infective_IP=1)
+init
 
 # run the ABM model
-res = run!(make_ABM(pertussisStatechart,transitions_rules,is_schema_singObject=false), init; maxtime=500);
+res = run!(make_ABM(pertussisStatechart,transitions_rules,is_schema_singObject=false), init; maxtime=50);
 
 # plot out the results of each state
 Makie.plot(res; Dict(o=>X->nparts(X,o) for o in states)...)

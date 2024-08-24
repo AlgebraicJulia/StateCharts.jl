@@ -5,7 +5,7 @@ module StateChartsSchema
 export UnitStateChartF, TheoryUnitStateChart, AbstractUnitStateChart, UnitStateChart,
 StateChartsF, TheoryStateCharts, AbstractStateCharts, StateCharts,
 ns, nt, nal, sname, snames, tname, tnames, aname, anames, texpr, dname, dnames,
-ttype, tsource, ttarget, etarget, alsource, alsources, altarget, altargets
+ttype, tsource, ttarget, etarget, alsource, alsources, altarget, altargets, spartition
 
 using Catlab
 
@@ -184,6 +184,8 @@ end
 
 nd(ss::AbstractStateCharts) = nparts(ss,:D)
 
+spartition(ss::AbstractStateCharts,s) = subpart(ss,s,:sd)
+
 dname(ss::AbstractStateCharts,d) = subpart(ss,d,:dname) 
 dnames(ss::AbstractStateCharts) = [dname(ss, d) for d in 1:nd(ss)]
 
@@ -191,6 +193,24 @@ dnames(ss::AbstractStateCharts) = [dname(ss, d) for d in 1:nd(ss)]
 # in the model running
 dname(ss::AbstractUnitStateChart,d) = :UnitStateChart
 dnames(ss::AbstractUnitStateChart) = [:UnitStateChart]
+
+# schema having the hazard rates of transitions can depend on states. And the logic of the expression of the hazard rates of transitions
+# are captured by GatExpr. Object representing Links from states to transitions is also included in this schema.
+#@present TheoryLinkedStateCharts <: TheoryStateCharts begin
+
+#    L::Ob # links from objects to transitions
+    
+#    lsrc::Hom(L,S)    
+#    ltgt::Attr(L, T)
+#end
+
+#@abstract_acset_type AbstractLinkedStateCharts <: AbstractStateCharts
+#@acset_type LinkedStateChartsUntype(TheoryLinkedStateCharts) <: AbstractLinkedStateCharts
+#const LinkedStateCharts = LinkedStateChartsUntype{Symbol,GATExpr{T},Symbol} # TODO: replace {T} to concrete expressions
+
+
+
+
 
 end
 

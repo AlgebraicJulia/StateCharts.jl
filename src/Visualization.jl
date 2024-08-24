@@ -14,14 +14,14 @@ TTYPE=Dict(:Rate=>"📉", :TimeOut=>"⏰", :Conditional=>"❓", :Pattern=>"🚩"
 # for Pattern, it indicates pattern match. User will provide the pattern match rule, and the state chart schema structure only
 # capture the index of the array of the user-defined pattern match rule.
 
-def_state(ss, s) = ("s$s", Attributes(:label=>"$(sname(ss, s))",
+def_state(ss, s; stateColors = nothing) = ("s$s", Attributes(:label=>"$(sname(ss, s))",
                                      :shape=>"square", 
                                      :color=>"black", 
                                      :style=>"filled", 
-                                     :fillcolor=>"gold2"))
+                                     :fillcolor=> isnothing(stateColors) ? "gold2" : stateColors[sname(ss, s)]))
 
-def_start(ss, se) = ("se$se", Attributes(:label=>"$(ename(ss, se))",
-                                     :shape=>"point"))
+#def_start(ss, se) = ("se$se", Attributes(:label=>"$(ename(ss, se))",
+#                                     :shape=>"point"))
 
 def_branchNode(ss, b, isStartTransition=true) = (isStartTransition ? "eb$b" : "b$b", Attributes(:label=>"",
                                                       :shape=>"diamond",
@@ -43,9 +43,9 @@ def_default_branch(ss, s, t) =  ([s, t],Attributes(:label=>"",
 
 def_alternative(ss, s, t, e, isStartTransition=true) =  ([s, t], isStartTransition ? Attributes(:label=>"$(eaname(ss,e))") : Attributes(:label=>"$(aname(ss,e))"))
 
-function Graph(ss::AbstractUnitStateChart)
+function Graph(ss::AbstractUnitStateChart; stateColors = nothing)
 
-    stateNodes = [Node(def_state(ss,s)...) for s in 1:ns(ss)]
+    stateNodes = [Node(def_state(ss,s, stateColors=stateColors)...) for s in 1:ns(ss)]
     branchNodes = [Node(def_branchNode(ss,b,false)...) for b in unique(alsources(ss))]
 
     smts_Noes=vcat(stateNodes,branchNodes)
