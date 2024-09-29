@@ -1,5 +1,4 @@
 [deps]
-AlgebraicABMs = "5a5e3447-9604-46e6-8d91-cb86f5f51721"
 AlgebraicRewriting = "725a01d3-f174-5bbd-84e1-b9417bad95d9"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -9,4 +8,3 @@ GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
-StateCharts = "bfc335c0-d564-425b-98aa-d5c699c8b7ab"
