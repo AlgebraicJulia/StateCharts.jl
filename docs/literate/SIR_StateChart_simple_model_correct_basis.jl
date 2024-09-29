@@ -11,8 +11,8 @@ ENV["JULIA_DEBUG"] = "AlgebraicABMs";
 
 # Step 1: define parameters
 
-total_population = 100 # Unit: persons
-frac_initial_infected = 0.05
+total_population = 4 # Unit: persons
+frac_initial_infected = 1.0/4.0
 contact_rate = 5 # Unit: contacts per day
 infectivity = 0.01
 average_illness_duration = 15 # days
@@ -34,8 +34,14 @@ SIRStatechart = UnitStateChartF(states, transitions, alternatives)
 stateColors = Dict(:S => "green",:I => "red",:R => "gray"); # argument define colors of each state in StateChart
 StateCharts.Graph(SIRStatechart, stateColors = stateColors)
 # 2.3 define the user_defined rewrite rules: rewrite rules for contacts of Infectives
-# Note that each transitions_rule has a pair: timer=>rule
-transition_rules = [ ContinuousHazard( 1.0 / (contact_rate * infectivity)) => make_infectious_rule_MultipleObjects(SIRStatechart, [[:S],[:I]],[:I],[[:I],[:I]], :P)]
+# Note that each transitions_rule has a pair: timer=>rule (if no basis)
+#                                         or: timer=> ( rule => basis ) (if has basis: L' -> L)
+
+# l = i = [[],:I], indicates a pair of persons, one generic person, and one infective
+# r = [:I,:I], indicates two infectives
+# lp = [:I], indicates an infective person
+# ac = [:S, :I], indicates a positive condition of a susceptible person and an infective person
+transition_rules = [ ContinuousHazard( 1.0 / (contact_rate * infectivity)) => make_infectious_rule_MultipleObjects(SIRStatechart, [[],:I],[[],:I],[:I,:I],[:I],[:S,:I],:P)]
 
 # Plot out the model schema
 # Note: this step is not nessesary. Here it is only used to show the model schema
@@ -47,7 +53,7 @@ to_graphviz(schema_statechart |> schemaACSet |> schemaPresent; prog="dot")
 init = radomlyAssignInitialInfectives(StateChartCset_MultipleObjects(SIRStatechart), Int(total_population), Int(frac_initial_infected * total_population))
 
 # Step 4: run the ABM model
-res = run!(make_ABM(SIRStatechart,transition_rules,is_schema_singObject=false), init; maxtime=50);
+res = run!(make_ABM(SIRStatechart,transition_rules,is_schema_singObject=false), init; maxtime=8);
 
 # Step 5: plot out the results of each state
 Makie.plot(res; Dict(o=>X->nparts(X,o) for o in states)...)

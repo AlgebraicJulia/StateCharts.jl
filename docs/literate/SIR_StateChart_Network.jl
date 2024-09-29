@@ -4,14 +4,6 @@ using AlgebraicABMs
 using Catlab
 using DataMigrations
 
-# TODO: add positions of nodes and have the positions stable
-# https://stackoverflow.com/questions/13938770/how-to-get-the-coordinates-from-layout-from-graphviz
-# solution of get the positions of nodes of graphviz
-
-# TODO:
-# https://stackoverflow.com/questions/5343899/how-to-force-node-position-x-and-y-in-graphviz
-# solution of plot graphviz with the node positions
-
 ENV["JULIA_DEBUG"] = "AlgebraicABMs"; 
 
 # SIR Agent-based model
@@ -96,7 +88,7 @@ end
 
 # 4.2 define the user_defined rewrite rules: rewrite rules for contacts of Infectives
 # Note that each transitions_rule has a pair: timer=>rule
-transition_rules = [ ContinuousHazard( 1.0 / (contact_rate * infectivity)) => make_infectious_rule_MultipleObjects(SIRStatechart, [[:S],[:I]],[:I],[[:I],[:I]], :V; use_DataMigration = true, acset = SIRModelStaticNet, migration_rule = migrate_rule)]
+transition_rules = [ ContinuousHazard( 1.0 / (contact_rate * infectivity)) => make_infectious_rule_MultipleObjects(SIRStatechart, [[:S],[:I]],[[],:I],[[:I],[:I]], :V; use_DataMigration = true, acset = SIRModelStaticNet, migration_rule = migrate_rule)]
 
 # Step 5: define the network
 network = smallworldNetWork(Int(total_population), average_connections, p_random_connect);

@@ -161,17 +161,22 @@ function make_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Sym
     mk_rule(LIR;obn=obn, use_DataMigration = use_DataMigration, acset = acset, migration_rule=migration_rule)     
 end
 
-function infectiousruleLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P)
+function infectiousruleLIR_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, lp, ac, obn::Symbol=:P)
+#    L = coproduct([representable_MultipleObjects(ss,[],obn),representable_MultipleObjects(ss,l,obn)]) |> apex
+#    I = coproduct([representable_MultipleObjects(ss,[],obn),representable_MultipleObjects(ss,i,obn)]) |> apex
     L = coproduct([representable_MultipleObjects(ss,p,obn) for p in l]) |> apex
-    I = coproduct([representable_MultipleObjects(ss,[],obn),representable_MultipleObjects(ss,i,obn)]) |> apex
+    I = coproduct([representable_MultipleObjects(ss,p,obn) for p in i]) |> apex
     R = coproduct([representable_MultipleObjects(ss,p,obn) for p in r]) |> apex
-    return [L,I,R]
+
+    Lp = representable_MultipleObjects(ss,lp,obn)
+    AC = coproduct([representable_MultipleObjects(ss,p,obn) for p in ac]) |> apex
+    return [L,I,R,Lp,AC]
 end
 
-function make_infectious_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
-    LIR = infectiousruleLIR_MultipleObjects(ss,l,i,r,obn)
-    L,I,R = use_DataMigration ? [migrate(acset, lir, migration_rule) for lir in LIR] : LIR
-    return Rule(homomorphism(I,L;monic=[obn]),homomorphism(I,R;monic=[obn],initial=(I=[2],)))
+function make_infectious_rule_MultipleObjects(ss::AbstractUnitStateChart, l, i, r, lp, ac, obn::Symbol=:P; use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing)
+    LIRLpAC = infectiousruleLIR_MultipleObjects(ss,l,i,r,lp,ac,obn)
+    L,I,R,Lp,AC = use_DataMigration ? [migrate(acset, ob, migration_rule) for ob in LIRLpAC] : LIRLpAC
+    return Rule(homomorphism(I,L;monic=[obn]),homomorphism(I,R;monic=[obn],initial=(I=[2],)); ac=[AppCond(homomorphism(L,AC;monic=[obn]))]) => homomorphism(Lp,L;monic=[obn]) # PAC
 end
 
 # generate the rewrite rule
@@ -181,7 +186,8 @@ function get_rule(ss::AbstractUnitStateChart,t,transitions_rules,obn::Symbol=:P;
     tt = ttype(ss,t)
     if tt == RLT
         tidx=Int(texpr(ss,t))
-        return transitions_rules[tidx][2]
+        rule = transitions_rules[tidx][2]
+        return isa(rule, Pair) ? first(rule) : rule
     elseif tt in [DST, CTT]
         # we assume all the states of other state charts are all unkown (set as variables)
         l = sname(ss,tsource(ss,t))
@@ -226,11 +232,16 @@ function get_timer(ss::AbstractUnitStateChart, transitions_rules,t)
     timer
 end
 
+# if basis is "true", the function of making rule returns a pair: rule (L <- I -> R) => basis (L' -> L)
+# if basis is "false", the function of making rule only returns the rule
+
 make_ABMRule(ss::AbstractUnitStateChart,t,transitions_rules, obn::Symbol=:P; is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing) = begin
     tn = tname(ss, t)
-    rule = get_rule(ss, t,transitions_rules,obn; is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule)
+    rule_raw = get_rule(ss, t,transitions_rules,obn; is_schema_singObject=is_schema_singObject, use_DataMigration=use_DataMigration, acset = acset, migration_rule=migration_rule)
+    hasbasis = isa(rule_raw, Pair)
+    rule = hasbasis ? first(rule_raw) : rule_raw
     timer = get_timer(ss,transitions_rules,t)
-    ABMRule(tn, rule, timer)
+    hasbasis ? ABMRule(tn, rule, timer; basis = last(rule_raw)) : ABMRule(tn, rule, timer)
 end
 
 make_ABM(ss::AbstractUnitStateChart, transitions_rules, obn=:P;is_schema_singObject::Bool=true, use_DataMigration::Bool = false, acset=nothing, migration_rule=nothing) = begin
