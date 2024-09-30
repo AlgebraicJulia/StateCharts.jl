@@ -6,6 +6,7 @@ export schemaACSet, schemaPresent
 using Catlab
 using ..NetworkSchemaInterfaces
 
+# schema convert functions between ACSet and schemas
 # create an acset schema from a present schema
 function schemaACSet(s::Presentation)
     obs = nameof.(generators(s,:Ob))
