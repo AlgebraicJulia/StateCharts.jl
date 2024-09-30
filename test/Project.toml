@@ -1,5 +1,4 @@
 [deps]
-AlgebraicRewriting = "725a01d3-f174-5bbd-84e1-b9417bad95d9"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CompetingClocks = "5bb9b785-358c-4fee-af0f-b94a146244a8"
