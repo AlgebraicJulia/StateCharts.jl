@@ -33,7 +33,7 @@ vectorify(n::SubArray) = collect(n)
 vectorify(n) = [n]
 
 
-# function return the ABM model Schema based on the input state charts
+# return the ABM model Schema based on the attribute-based encoding of input state charts
 # the schema's structure is:
 # 1. one object: usually is Person
 # 2. each unit state chart contributes to one attribute
@@ -47,11 +47,11 @@ function StateChartABMSchema_SingleObject(ss::AbstractUnitStateChart,obn::Symbol
     schema
 end
 
-# function return ABM model schema based on the input state charts
+# return an ABM model schema based on object-based encoding of state charts
 # the schema's structure is:
 # 1. Objects: total number of states in state charts + 1 (the coproduct of the objects of states), the name of the coproduct
 #             object is given by input argument "obn"
-# 2. Morphisms: each object of state has a morphism to the "1" -- the coproduct of states
+# 2. Morphisms: each object of state has a morphism to the object "1" -- the coproduct of states
 
 function StateChartABMSchema_MultipleObjects(ss::AbstractUnitStateChart,obn::Symbol=:P)
     # generate the list of objects

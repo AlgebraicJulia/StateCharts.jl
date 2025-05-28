@@ -247,7 +247,7 @@ transitions_rules_migrated = [map((x,y)->ContinuousHazard(1/(c*x))=>make_infecti
 average_connections = 4
 p_random_connect = 0.1
 nw = smallworldNetWork(Int(totalPopulation), average_connections, p_random_connect);
-network = last(nw)
+network = last(nw) # extract the ACSet set from the network definition
 
 # define the initial state
 init = PertussisModelStaticNet()
